@@ -7,6 +7,9 @@
 #ifndef __SUBC_H__
 #define __SUBC_H__
 
+#define KEYWORD 0
+#define IDENTIFIER 1
+
 #include <stdio.h>
 #include <strings.h>
 

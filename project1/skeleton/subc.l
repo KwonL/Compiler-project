@@ -26,10 +26,16 @@ int commentdepth=0;
 %}
 
 letter		[A-Za-z_]
+digit	[0-9]
+id	{letter}({letter}|{digit})*
+
 %start AA BB
 
-%%
-{letter}	{ }
+%% 
+
+struct/\ {id}	{ printf("Structue input\n"); }
+.*	{ printf("invalid input"); }
+
 
 %%
 void initHash() 
@@ -42,7 +48,7 @@ void initHash()
 
 	/* Initilize Hash Tabel with Keywords */
 	for (i = 0; strcmp(keyWord[i], "\0") !=0; i++) {
-		//enter(KEYWORD, keyWord[i],strlen(keyWord[i]));
+		enter(KEYWORD, keyWord[i],strlen(keyWord[i]));
 	}
 }
 
