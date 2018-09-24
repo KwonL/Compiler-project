@@ -56,11 +56,34 @@ unsigned hash(char* name) {
 			// ++ count
 			cur_node->data->count++;
 
-			return 0;
+			return cur_node->data->count;
 		}
 
 		cur_node = cur_node->next;
 	}
 	
+	// There is no matching name, so enter it
+	enter(IDENTIFIER, name, strlen(name))->count++;
 	return 1;
+}
+
+int isKeyword(char* name) {
+	nlist* cur_node = hashTable;
+
+	// search for name 
+	while (cur_node != NULL) {
+		if (!strcmp(cur_node->data->name, name)) {
+			// if matching name is Keyword, return 1
+			if (cur_node->data->tokenType == KEYWORD)
+				return KEYWORD;
+			// else return 0
+			else 
+				return IDENTIFIER;
+		}
+
+		cur_node = cur_node->next;
+	}
+
+	// if no matching, return -1
+	return -1;
 }
