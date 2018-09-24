@@ -28,7 +28,9 @@ int commentdepth=0;
 letter		[A-Za-z_]
 digit	[0-9]
 id	{letter}({letter}|{digit})*
-white_space [\ \t\n]
+white_space	[" "\t\n]
+integer_constant	[1-9]{digit}*
+float_constant	{digit}+\.({digit}?)*
 
 %start NORMAL COMMENT
 
@@ -39,16 +41,23 @@ white_space [\ \t\n]
 	char* id = yytext;
 	unsigned int count = hash(id);
 
-	// Just use it
+	// if id in hashTable is keyword
 	if (isKeyword(id) == KEYWORD) 
 		printf("KEY\t%s\t%d\n", id, count);
+	// else, it is identifier
 	else {
 		printf("ID\t%s\t%d\n", id, count);
 	}
 }
 
-.*	{ printf("invalid input"); }
+{integer_constant} {
+	printf("INT\t%s\n", yytext);
+}
+{float_constant} {
+	printf("F\t%s\n", yytext);
+}
 
+.*	{ printf("invalid input\n"); }
 
 %%
 void initHash() 
