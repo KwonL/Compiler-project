@@ -32,13 +32,15 @@ WS	[ \t\n\ ]
 integer_constant	[1-9]{digit}*
 float_constant	{digit}+\.({digit}?)*
 operator	("( )"|"[ ]"|"{ }"|"->"|"."|","|".."|"!"|"~"|"++"|"--"|"*"|"/"|"%"|"+"|"-"|"<<"|">>"|"<"|"<="|">"|">="|"=="|"!="|"&"|"^"|"|"|"&&"|"||"|"?"|":"|";"|"="|"+="|"-="|"*="|"/="|"%="|"&="|"^="|"|="|"<<="|">>=")
+comment_start	("/*")
+comment_end ("*/")
 
 %start NORMAL COMMENT
 
 %% 
 
 	/* this  is for id and keyword */
-{id} {
+<NORMAL>{id} {
 	char* id = yytext;
 	unsigned int count = hash(id);
 
@@ -51,17 +53,35 @@ operator	("( )"|"[ ]"|"{ }"|"->"|"."|","|".."|"!"|"~"|"++"|"--"|"*"|"/"|"%"|"+"|
 	}
 }
 	/* integer constant */
-{integer_constant} {
+<NORMAL>{integer_constant} {
 	printf("INT\t%s\n", yytext);
 }
 	/* float constant */
-{float_constant} {
+<NORMAL>{float_constant} {
 	printf("F\t%s\n", yytext);
 }
 	/* operators */
-{operator} {
+<NORMAL>{operator} {
 	printf("OP\t%s\n", yytext);
 }
+
+	/* comment */
+{comment_start} {
+	if (commentdepth == 0) {
+		BEGIN COMMENT;
+		printf("comment start!\n");
+	}
+
+	commentdepth++;
+}
+{comment_end} {
+	commentdepth--;
+	if (commentdepth == 0) {
+		BEGIN NORMAL;
+		printf("comment end!\n");
+	}
+}
+<COMMENT>. {;}
 
 	/* Do nothing with white space */
 {WS}+ {}
