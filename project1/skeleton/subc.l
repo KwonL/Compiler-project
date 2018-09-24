@@ -28,12 +28,25 @@ int commentdepth=0;
 letter		[A-Za-z_]
 digit	[0-9]
 id	{letter}({letter}|{digit})*
+white_space [\ \t\n]
 
-%start AA BB
+%start NORMAL COMMENT
 
 %% 
 
-struct/\ {id}	{ printf("Structue input\n"); }
+
+{id} {
+	char* id = yytext;
+	unsigned int count = hash(id);
+
+	// Just use it
+	if (isKeyword(id) == KEYWORD) 
+		printf("KEY\t%s\t%d\n", id, count);
+	else {
+		printf("ID\t%s\t%d\n", id, count);
+	}
+}
+
 .*	{ printf("invalid input"); }
 
 
@@ -43,7 +56,10 @@ void initHash()
 	int i;
 
 	char* keyWord[]={
-		"int","return", "\0"
+		"auto", "break", "case", "char", "continue", "default", "do", 
+		"double", "else",  "extern", "float", "for", "goto", "if", "int", 
+		"long", "register", "return", "short" "sizeof", "static", "struct", 
+		"switch", "typedef", "union", "unsigned", "void", "while", "\0"
 	};
 
 	/* Initilize Hash Tabel with Keywords */
@@ -67,7 +83,7 @@ int main(int argc, char** argv)
 
 	initHash();
 
-	BEGIN AA;
+	BEGIN NORMAL;
 	yylex ();
 
 	return 0;

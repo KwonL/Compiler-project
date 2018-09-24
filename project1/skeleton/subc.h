@@ -7,8 +7,8 @@
 #ifndef __SUBC_H__
 #define __SUBC_H__
 
-#define KEYWORD 0
-#define IDENTIFIER 1
+#define KEYWORD 1
+#define IDENTIFIER 0
 
 #include <stdio.h>
 #include <strings.h>
@@ -22,5 +22,6 @@ typedef struct id {
 /* For hash table */
 unsigned hash(char *name);
 id *enter(int tokenType, char *name, int length);
+int isKeyword(char* name);
 
 #endif
