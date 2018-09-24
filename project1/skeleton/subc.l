@@ -28,7 +28,7 @@ int commentdepth=0;
 letter		[A-Za-z_]
 digit	[0-9]
 id	{letter}({letter}|{digit})*
-white_space	[ \t\n\ ]
+WS	[ \t\n\ ]
 integer_constant	[1-9]{digit}*
 float_constant	{digit}+\.({digit}?)*
 
@@ -36,7 +36,7 @@ float_constant	{digit}+\.({digit}?)*
 
 %% 
 
-
+	/* this  is for id and keyword */
 {id} {
 	char* id = yytext;
 	unsigned int count = hash(id);
@@ -49,15 +49,16 @@ float_constant	{digit}+\.({digit}?)*
 		printf("ID\t%s\t%d\n", id, count);
 	}
 }
-
+	/* integer constant */
 {integer_constant} {
 	printf("INT\t%s\n", yytext);
 }
+	/* float constant */
 {float_constant} {
 	printf("F\t%s\n", yytext);
 }
-
-{white_space}+ {}
+	/* Do nothing with white space */
+{WS}+ {}
 . { printf("invalid input\n"); }
 
 %%
