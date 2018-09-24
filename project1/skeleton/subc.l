@@ -28,7 +28,7 @@ int commentdepth=0;
 letter		[A-Za-z_]
 digit	[0-9]
 id	{letter}({letter}|{digit})*
-white_space	[" "\t\n]
+white_space	[ \t\n\ ]
 integer_constant	[1-9]{digit}*
 float_constant	{digit}+\.({digit}?)*
 
@@ -57,7 +57,8 @@ float_constant	{digit}+\.({digit}?)*
 	printf("F\t%s\n", yytext);
 }
 
-.*	{ printf("invalid input\n"); }
+{white_space}+ {}
+. { printf("invalid input\n"); }
 
 %%
 void initHash() 
