@@ -31,6 +31,7 @@ id	{letter}({letter}|{digit})*
 WS	[ \t\n\ ]
 integer_constant	[1-9]{digit}*
 float_constant	{digit}+\.({digit}?)*
+operator	("( )"|"[ ]"|"{ }"|"->"|"."|","|".."|"!"|"~"|"++"|"--"|"*"|"/"|"%"|"+"|"-"|"<<"|">>"|"<"|"<="|">"|">="|"=="|"!="|"&"|"^"|"|"|"&&"|"||"|"?"|":"|";"|"="|"+="|"-="|"*="|"/="|"%="|"&="|"^="|"|="|"<<="|">>=")
 
 %start NORMAL COMMENT
 
@@ -57,9 +58,15 @@ float_constant	{digit}+\.({digit}?)*
 {float_constant} {
 	printf("F\t%s\n", yytext);
 }
+	/* operators */
+{operator} {
+	printf("OP\t%s\n", yytext);
+}
+
 	/* Do nothing with white space */
 {WS}+ {}
 . { printf("invalid input\n"); }
+
 
 %%
 void initHash() 
