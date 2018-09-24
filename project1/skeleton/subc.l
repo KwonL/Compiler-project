@@ -31,13 +31,14 @@ id	{letter}({letter}|{digit})*
 WS	[ \t\n\ ]
 integer_constant	[1-9]{digit}*
 float_constant	{digit}+\.({digit}?)*
-operator	("( )"|"[ ]"|"{ }"|"->"|"."|","|".."|"!"|"~"|"++"|"--"|"*"|"/"|"%"|"+"|"-"|"<<"|">>"|"<"|"<="|">"|">="|"=="|"!="|"&"|"^"|"|"|"&&"|"||"|"?"|":"|";"|"="|"+="|"-="|"*="|"/="|"%="|"&="|"^="|"|="|"<<="|">>=")
+operator	("("|")"|"["|"]"|"{"|"}"|"->"|"."|","|".."|"!"|"~"|"++"|"--"|"*"|"/"|"%"|"+"|"-"|"<<"|">>"|"<"|"<="|">"|">="|"=="|"!="|"&"|"^"|"|"|"&&"|"||"|"?"|":"|";"|"="|"+="|"-="|"*="|"/="|"%="|"&="|"^="|"|="|"<<="|">>=")
 comment_start	("/*")
 comment_end ("*/")
 
 %start NORMAL COMMENT
 
 %% 
+
 
 	/* this  is for id and keyword */
 <NORMAL>{id} {
@@ -56,6 +57,10 @@ comment_end ("*/")
 <NORMAL>{integer_constant} {
 	printf("INT\t%s\n", yytext);
 }
+	/* dot dot operator */
+<NORMAL>{integer_constant}/".." {
+	printf("INT\t%s\n", yytext);
+}
 	/* float constant */
 <NORMAL>{float_constant} {
 	printf("F\t%s\n", yytext);
@@ -65,11 +70,10 @@ comment_end ("*/")
 	printf("OP\t%s\n", yytext);
 }
 
-	/* comment */
+	/********* comment *********/
 {comment_start} {
 	if (commentdepth == 0) {
 		BEGIN COMMENT;
-		printf("comment start!\n");
 	}
 
 	commentdepth++;
@@ -78,10 +82,10 @@ comment_end ("*/")
 	commentdepth--;
 	if (commentdepth == 0) {
 		BEGIN NORMAL;
-		printf("comment end!\n");
 	}
 }
 <COMMENT>. {;}
+	/*************** end of comment ***************/
 
 	/* Do nothing with white space */
 {WS}+ {}
