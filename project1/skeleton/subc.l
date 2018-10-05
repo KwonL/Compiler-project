@@ -29,8 +29,8 @@ letter		[A-Za-z_]
 digit	[0-9]
 id	{letter}({letter}|{digit})*
 WS	[ \t\n\ ]
-integer_constant	[1-9]{digit}*
-float_constant	{digit}+\.({digit}?)*
+integer_constant	([1-9]+{digit}*)|0
+float_constant	{digit}+\.{digit}*([eE][+-]?{digit}+)?
 operator	("("|")"|"["|"]"|"{"|"}"|"->"|"."|","|".."|"!"|"~"|"++"|"--"|"*"|"/"|"%"|"+"|"-"|"<<"|">>"|"<"|"<="|">"|">="|"=="|"!="|"&"|"^"|"|"|"&&"|"||"|"?"|":"|";"|"="|"+="|"-="|"*="|"/="|"%="|"&="|"^="|"|="|"<<="|">>=")
 comment_start	("/*")
 comment_end ("*/")
