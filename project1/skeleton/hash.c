@@ -16,6 +16,7 @@ typedef struct nlist {
 	id *data;
 } nlist;
 
+// This is root pointer of hashtable 
 static nlist* hashTable = NULL;
 
 id *enter(int tokenType, char *name, int length) {
@@ -35,23 +36,28 @@ id *enter(int tokenType, char *name, int length) {
 
 	nlist* cur_node = hashTable;
 
+	// Initially insert into hashTable
 	if (cur_node == NULL) hashTable = node;
 	// Move cursor until  meet end of list
 	else {
 		while (cur_node->next != NULL) {
 			cur_node = cur_node->next;
 		}
+		// insert new node to linked list
 		cur_node->next = node;
 	}
 
 	return new_id;
 }
 
+/*
+ * searching for name at hashTable. return count of name else enter name and return 1
+ */
 unsigned hash(char* name) {
-	// search for hash table
 	nlist* cur_node = hashTable;
 
 	while (cur_node != NULL) {
+		// name matched
 		if (!strcmp(cur_node->data->name, name)) {
 			// ++ count
 			cur_node->data->count++;
@@ -59,14 +65,19 @@ unsigned hash(char* name) {
 			return cur_node->data->count;
 		}
 
+		// move cursor
 		cur_node = cur_node->next;
 	}
 	
 	// There is no matching name, so enter it
-	enter(IDENTIFIER, name, strlen(name))->count++;
+	enter(IDENTIFIER, name, strlen(name))->count++;	
+
 	return 1;
 }
 
+/*
+ * searching for name in hashTable, and return tokenType of name
+ */
 int isKeyword(char* name) {
 	nlist* cur_node = hashTable;
 
