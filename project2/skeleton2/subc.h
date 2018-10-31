@@ -7,21 +7,23 @@
 #ifndef __SUBC_H__
 #define __SUBC_H__
 
+#define KEYWORD 1
+#define IDENTIFIER 0
+
 #include <stdio.h>
 #include <strings.h>
 
-/* structure for ID */
-struct id {
-      char *name;
-      int lextype;
-};
+typedef struct id {
+	int lextype;
+	char *name;
+} id;
 
 /* For hash table */
 unsigned hash(char *name);
-struct id *enter(int lextype, char *name, int length);
-struct id *lookup(char *name);
+id *enter(int tokenType, char *name, int length);
+id *lookup(char *name);
+int isKeyword(char* name);
 
 int read_line();
 
 #endif
-

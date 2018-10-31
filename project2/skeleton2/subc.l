@@ -25,26 +25,50 @@ special-char	\\[nt]
 "int" 	|
 "char"	{ return TYPE; }
 "struct" 	{ return STRUCT;}
+"return"	{ return RETURN; }
+"if"	{ return IF; }
+"else"	{ return ELSE; }
+"while"	{ return WHILE; }
+"for"	{return FOR; }
+"break"	{return BREAK; }
+"continue"	{ return CONTINUE; }
+["+="|"-="|"*="|"/="|"%="]	{ return ASSIGNOP; }
+"||"	{ return LOGICAL_OR; }
+"&&"	{ return LOGICAL_AND; }
+["<"|"<="|">"|">="]	{return RELOP; }
+"++"	{ return PLUS_PLUS; }
+"--"	{return MINUS_MINUS; }
+"."	{return STRUCTOP; }
 {id}	{
-		   struct id *entered  = enter(ID, yytext, yyleng);
-		   yylval.stringVal = entered->name;
-		   return entered->lextype;
-		}
+	struct id * entered = lookup(yytext);
+	if (entered == NULL) {
+		entered  = enter(ID, yytext, yyleng);
+	}
+	yylval.stringVal = entered->name;
+	return entered->lextype;
+}
 {integer_const}	{
-		   yylval.intVal = atoi(yytext);
-		   return INTEGER_CONST;
-		}
+	yylval.intVal = atoi(yytext);
+	return INTEGER_CONST;
+}
 \"({special-char}|[^\\\"\n])*\"	{
-			/* String Variable */
-		   yylval.stringVal = yytext;
-		   return STRING;
-		}
+	/* String Variable */
+	yylval.stringVal = yytext;
+	return STRING;
+}
 '({special-char}|[^\\'\n])'	{
-			/* Character Variable */
-		   yylval.stringVal = yytext;
-		   return CHAR_CONST;
-		}
+	/* Character Variable */
+	yylval.stringVal = yytext;
+	return CHAR_CONST;
+}
 ","		{ return ','; }
+"!"		{ return '!'; }
+"-"		{ return '-'; }
+"+"		{ return '+'; }
+"*"		{ return '*'; }
+"&"		{ return '&'; }
+"|"		{ return '|'; }
+"="		{ return '='; }
 ";"		{ return yytext[0]; }
 
 {white-space}

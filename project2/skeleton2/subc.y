@@ -26,6 +26,19 @@ void 	REDUCE(char* s);
 %token 				TYPE STRUCT
 %token<stringVal>	ID CHAR_CONST STRING STRUCTOP
 %token<intVal>		INTEGER_CONST
+%token              RETURN
+%token              IF
+%token              ELSE
+%token              WHILE
+%token              FOR
+%token              BREAK
+%token              CONTINUE
+%token              ASSIGNOP
+%token              LOGICAL_OR
+%token              LOGICAL_AND
+%token              RELOP
+%token              PLUS_PLUS
+%token              MINUS_MINUS
 
 %%
 program: ext_def_list	{
