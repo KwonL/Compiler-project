@@ -18,10 +18,12 @@ id		{letter}({letter}|{digit})*
 integer_const	([1-9]{digit}*)|"0"
 white-space		[ \t]+
 special-char	\\[nt]
+return_single	","|"!"|"-"|"+"|"*"|"&"|"|"|"="|";"
 
 
 %x COMMENT
 %%
+"."	{return STRUCTOP; }
 "int" 	|
 "char"	{ return TYPE; }
 "struct" 	{ return STRUCT;}
@@ -38,7 +40,6 @@ special-char	\\[nt]
 ["<"|"<="|">"|">="]	{return RELOP; }
 "++"	{ return PLUS_PLUS; }
 "--"	{return MINUS_MINUS; }
-"."	{return STRUCTOP; }
 {id}	{
 	struct id * entered = lookup(yytext);
 	if (entered == NULL) {
@@ -61,15 +62,7 @@ special-char	\\[nt]
 	yylval.stringVal = yytext;
 	return CHAR_CONST;
 }
-","		{ return ','; }
-"!"		{ return '!'; }
-"-"		{ return '-'; }
-"+"		{ return '+'; }
-"*"		{ return '*'; }
-"&"		{ return '&'; }
-"|"		{ return '|'; }
-"="		{ return '='; }
-";"		{ return yytext[0]; }
+{return_single}		{ return yytext[0]; }
 
 {white-space}
 <*>\n		   ++lineno;

@@ -22,7 +22,6 @@ typedef struct id {
 unsigned hash(char *name);
 id *enter(int tokenType, char *name, int length);
 id *lookup(char *name);
-int isKeyword(char* name);
 
 int read_line();
 

@@ -49,28 +49,7 @@ id *enter(int tokenType, char *name, int length) {
 	return new_id;
 }
 
-/*
- * searching for name at hashTable. return count of name else enter name and return 1
- */
 unsigned hash(char* name) {
-	// nlist* cur_node = hashTable;
-
-	// while (cur_node != NULL) {
-	// 	// name matched
-	// 	if (!strcmp(cur_node->data->name, name)) {
-	// 		// ++ count
-	// 		cur_node->data->count++;
-
-	// 		return cur_node->data->count;
-	// 	}
-
-	// 	// move cursor
-	// 	cur_node = cur_node->next;
-	// }
-	
-	// // There is no matching name, so enter it
-	// // enter(IDENTIFIER, name, strlen(name))->count++;	
-
 	return 1;
 }
 
@@ -88,28 +67,4 @@ id *lookup(char *name) {
 	}
 
 	return NULL;
-}
-
-/*
- * searching for name in hashTable, and return tokenType of name
- */
-int isKeyword(char* name) {
-	nlist* cur_node = hashTable;
-
-	// search for name 
-	while (cur_node != NULL) {
-		if (!strcmp(cur_node->data->name, name)) {
-			// if matching name is Keyword, return 1
-			if (cur_node->data->lextype == KEYWORD)
-				return KEYWORD;
-			// else return 0
-			else 
-				return IDENTIFIER;
-		}
-
-		cur_node = cur_node->next;
-	}
-
-	// if no matching, return -1
-	return -1;
 }
