@@ -19,7 +19,17 @@ void 	REDUCE(char* s);
 }
 
 /* Precedences and Associativities */
-%left	','
+%left   ','
+%right  ASSIGNOP    '='
+%left   LOGICAL_OR
+%left   LOGICAL_AND
+%left   '|'
+%left   '&'
+%left   EQUOP
+%left   RELOP
+%left   '+'    '-'
+%left   '*'    '%'    '/'
+%right  '!'    PLUS_PLUS   MINUS_MINUS
 %left 	STRUCTOP
 
 /* Token and Types */
@@ -33,28 +43,29 @@ void 	REDUCE(char* s);
 %token              FOR
 %token              BREAK
 %token              CONTINUE
-%token              ASSIGNOP
-%token              LOGICAL_OR
-%token              LOGICAL_AND
-%token              RELOP
-%token              PLUS_PLUS
-%token              MINUS_MINUS
 
 %%
-program: ext_def_list	{
-            REDUCE("program->ext_def_list");
-        }
-   ;
-ext_def_list: ext_def_list ext_def	{
-            REDUCE("ext_def_list->ext_def_list ext_def");
-        }
-   | /* empty */	{
-            REDUCE("ext_def_list->epsilon");
-        }
-   ;
-ext_def: TYPE def ';'	{}
-   | /* empty */	{}
-   ;
+program: 
+    ext_def_list	{
+        REDUCE("program->ext_def_list");
+    }
+    ;
+ext_def_list: 
+    ext_def_list ext_def {
+        REDUCE("ext_def_list->ext_def_list ext_def")
+    }
+	| /* empty */ {
+        REDUCE("ext_def_list->epsilon")
+    }
+    ;
+ext_def: 
+    opt_specifier ext_decl_list ';' {
+        REDUCE("ext_def_list->opt_specifier ext_decl_list ';'");
+    }
+    | opt_specifier funct_decl compound_stmt {
+        REDUCE("ext_def_list->opt_specifier funct_decl compound_stmt");
+    }
+    ;
 def: def ',' def	{}
    | unary	{}
    ;

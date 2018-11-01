@@ -38,6 +38,7 @@ return_single	","|"!"|"-"|"+"|"*"|"&"|"|"|"="|";"
 "||"	{ return LOGICAL_OR; }
 "&&"	{ return LOGICAL_AND; }
 ["<"|"<="|">"|">="]	{return RELOP; }
+"=="	{ return EQUOP; }
 "++"	{ return PLUS_PLUS; }
 "--"	{return MINUS_MINUS; }
 {id}	{
