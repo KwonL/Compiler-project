@@ -30,15 +30,15 @@ void 	REDUCE(char* s);
 %left   '+'    '-'
 %left   '*'    '%'    '/'
 %right  '!'    PLUS_PLUS   MINUS_MINUS
-%left 	STRUCTOP
+%left 	STRUCTOP '[' ']' '(' ')' 
 
 /* Token and Types */
 %token 				TYPE STRUCT
-%token<stringVal>	ID CHAR_CONST STRING STRUCTOP
+%token<stringVal>	ID CHAR_CONST STRING
 %token<intVal>		INTEGER_CONST
 %token              RETURN
 %token              IF
-%token              ELSE
+%nonassoc              ELSE
 %token              WHILE
 %token              FOR
 %token              BREAK
@@ -158,7 +158,7 @@ def_list:
     ;
 def:
     type_specifier decl_list ';' {
-        REDUCE("def->type_specifier decl_list");
+        REDUCE("def->type_specifier decl_list ';'");
     }
     ;
 decl_list:
@@ -196,78 +196,180 @@ stmt_list:
     }
     ;
 stmt:
-    expr ';'
-    | compound_stmt
-    | RETURN ';'
-    | RETURN expr ';'
-    | ';'
-    | IF '(' test ')' stmt
-    | IF '(' test ')' stmt ELSE stmt
-    | WHILE '(' test ')' stmt
-    | FOR '(' opt_expr ';' test ';' opt_expr ')' stmt
-    | BREAK ';'
-    | CONTINUE ';'
+    expr ';' {
+        REDUCE("stmt->expr ';'");
+    }
+    | compound_stmt {
+        REDUCE("stmt->compound_stmt");
+    }
+    | RETURN ';' {
+        REDUCE("stmt->RETURN ';'");
+    }
+    | RETURN expr ';' {
+        REDUCE("stmt->RETURN expr ';'");
+    }
+    | ';' {
+        REDUCE("stmt->';'");
+    }
+    | IF '(' test ')' stmt {
+        REDUCE("stmt->IF '(' test ')' stmt");
+    }
+    | IF '(' test ')' stmt ELSE stmt {
+        REDUCE("stmt->IF '(' test ')' stmt ELSE stmt");
+    }
+    | WHILE '(' test ')' stmt {
+        REDUCE("stmt->WHILE '(' test ')' stmt");
+    }
+    | FOR '(' opt_expr ';' test ';' opt_expr ')' stmt {
+        REDUCE("stmt->FOR '(' opt_expr ';' test ';' opt_expr ')' stmt");
+    }
+    | BREAK ';' {
+        REDUCE("stmt->BREAK ';'");
+    }
+    | CONTINUE ';' {
+        REDUCE("stmt->CONTINUE ';'");
+    }
     ;
-test:		
-    expr
-    | /* empty */
+test: 
+    expr {
+        REDUCE("test->expr");
+    }
+    | /* empty */ {
+        REDUCE("test->epsilon");
+    }
     ;
 opt_expr:
-    expr
-    | /* empty */
+    expr {
+        REDUCE("opt_expr->expr");
+    }
+    | /* empty */ {
+        REDUCE("opt_expr->empty");
+    }
     ;
 expr:
-    expr ASSINGOP expr
-    | expr '=' expr
-    | or_expr
+    expr ASSINGOP expr {
+        REDUCE("expr->expr ASSINGOP expr");
+    }
+    | expr '=' expr {
+        REDUCE("expr->expr '=' expr");
+    }
+    | or_expr {
+        REDUCE("expr->or_expr");
+    }
     ;
 or_expr:
-    or_list
+    or_list {
+        REDUCE("or_expr->or_list");
+    }
     ;
 
 or_list:
-    or_list LOGICAL_OR and_expr
-    | or_list '|' and_expr
-    | and_expr
+    or_list LOGICAL_OR and_expr {
+        REDUCE("or_list->or_list LOGICAL_OR and_expr");
+    }
+    | or_list '|' and_expr {
+        REDUCE("or_list->or_list '|' and_expr");
+    }
+    | and_expr {
+        REDUCE("or_list->and_expr");
+    }
     ;
-and_expr:	
-    and_list
+and_expr:
+    and_list {
+        REDUCE("and_expr->and_list");
+    }
     ;
 and_list:
-    and_list LOGICAL_AND binary
-    | and_list '&' binary
-    | binary
+    and_list LOGICAL_AND binary {
+        REDUCE("and_list->and_list LOGICAL_AND binary");
+    }
+    | and_list '&' binary {
+        REDUCE("and_list->and_list '&' binary");
+    }
+    | binary {
+        REDUCE("and_list->binary");
+    }
     ;
 binary:
-    binary RELOP binary
-    | binary EQUOP binary
-    | binary '*' binary
-    | binary '/' binary
-    | binary '%' binary
-    | binary '+' binary
-    | binary '-' binary
-    | unary
+    binary RELOP binary {
+        REDUCE("binary->binary RELOP binary");
+    }
+    | binary EQUOP binary {
+        REDUCE("binary->binary EQUOP binary");
+    }
+    | binary '*' binary {
+        REDUCE("binary->binary '*' binary");
+    }
+    | binary '/' binary {
+        REDUCE("binary->binary '/' binary");
+    }
+    | binary '%' binary {
+        REDUCE("binary->binary '%' binary");
+    }
+    | binary '+' binary {
+        REDUCE("binary->binary '+' binary");
+    }
+    | binary '-' binary {
+        REDUCE("binary->binary '-' binary");
+    }
+    | unary {
+        REDUCE("binary->unary");
+    }
     ;
 unary:
-    '(' expr ')'
-    | INTEGER_CONST
-    | CHAR_CONST
-    | ID
-    | STRING
-    | '-' unary
-    | '!' unary
-    | unary PLUS_PLUS
-    | unary MINUS_MINUS
-    | '&' unary
-    | '*' unary
-    | unary '[' expr ']'
-    | unary STRUCTOP ID
-    | unary '(' args ')'
-    | unary '(' ')'
+    '(' expr ')' {
+        REDUCE("unary->'(' expr ')'");
+    }
+    | INTEGER_CONST {
+        REDUCE("unary->INTEGER_CONST");
+    }
+    | CHAR_CONST {
+        REDUCE("unary->CHAR_CONST");
+    }
+    | ID {
+        REDUCE("unary->ID");
+    }
+    | STRING {
+        REDUCE("unary->STRING");
+    }
+    | '-' unary %prec '!' {
+        REDUCE("unary->'-' unary");
+    }
+    | '!' unary {
+        REDUCE("unary->'!' unary");
+    }
+    | unary PLUS_PLUS {
+        REDUCE("unary->unary PLUS_PLUS");
+    }
+    | unary MINUS_MINUS {
+        REDUCE("unary->unary MINUS_MINUS");
+    }
+    | '&' unary %prec '!' {
+        REDUCE("unary->'&' unary");
+    }
+    | '*' unary %prec '!' {
+        REDUCE("unary->'*' unary");
+    }
+    | unary '[' expr ']' {
+        REDUCE("unary->'[' expr ']'");
+    }
+    | unary STRUCTOP ID {
+        REDUCE("unary->unary STRUCTOP ID");
+    }
+    | unary '(' args ')' {
+        REDUCE("unary->'(' args ')'");
+    }
+    | unary '(' ')' {
+        REDUCE("unary->'(' ')'");
+    }
     ;
 args:
-    expr
-    | args ',' expr
+    expr {
+        REDUCE("args->expr");
+    }
+    | args ',' expr {
+        REDUCE("args->args ',' expr");
+    }
     ;
 %%
 

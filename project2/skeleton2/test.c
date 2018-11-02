@@ -11,4 +11,9 @@ int main(){
 	} else {
 		return 0;
 	}
+
+	struct my_struct {
+		int kk;
+		char abced;
+	};	
 }
