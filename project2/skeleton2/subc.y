@@ -37,6 +37,7 @@ void 	REDUCE(char* s);
 %token<stringVal>	ID CHAR_CONST STRING
 %token<intVal>		INTEGER_CONST
 %token              RETURN
+// ELSE and THEN have no associativity. ELSE has higher precedence, so can resolve conflict
 %nonassoc               THEN
 %nonassoc              ELSE
 %token              IF
@@ -334,6 +335,7 @@ unary:
     | STRING {
         REDUCE("unary->STRING");
     }
+    // using precedence for resolving conflict.
     | '-' unary %prec '!' {
         REDUCE("unary->'-' unary");
     }
