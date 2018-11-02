@@ -37,12 +37,14 @@ void 	REDUCE(char* s);
 %token<stringVal>	ID CHAR_CONST STRING
 %token<intVal>		INTEGER_CONST
 %token              RETURN
-%token              IF
+%nonassoc               THEN
 %nonassoc              ELSE
+%token              IF
 %token              WHILE
 %token              FOR
 %token              BREAK
 %token              CONTINUE
+// %nonassoc       NONASSOC
 
 %%
 program: 
@@ -211,7 +213,7 @@ stmt:
     | ';' {
         REDUCE("stmt->';'");
     }
-    | IF '(' test ')' stmt {
+    | IF '(' test ')' stmt %prec THEN {
         REDUCE("stmt->IF '(' test ')' stmt");
     }
     | IF '(' test ')' stmt ELSE stmt {
