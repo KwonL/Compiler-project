@@ -47,10 +47,13 @@ return_single	","|"!"|"-"|"+"|"*"|"&"|"|"|"="|";"|"("|")"|"{"|"}"|"["|"]"
 "++"	{ return PLUS_PLUS; }
 "--"	{return MINUS_MINUS; }
 {id}	{
+	// search if already entered
 	struct id * entered = lookup(yytext);
 	if (entered == NULL) {
+		// enter new token
 		entered  = enter(ID, yytext, yyleng);
 	}
+	// return token
 	yylval.stringVal = entered->name;
 	return entered->lextype;
 }
