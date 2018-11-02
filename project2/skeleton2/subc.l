@@ -34,7 +34,8 @@ return_single	","|"!"|"-"|"+"|"*"|"&"|"|"|"="|";"
 "for"	{return FOR; }
 "break"	{return BREAK; }
 "continue"	{ return CONTINUE; }
-["+="|"-="|"*="|"/="|"%="]	{ return ASSIGNOP; }
+{return_single}		{ return yytext[0]; }
+["+="|"-="|"*="|"/="|"%="]	{ return ASSINGOP; }
 "||"	{ return LOGICAL_OR; }
 "&&"	{ return LOGICAL_AND; }
 ["<"|"<="|">"|">="]	{return RELOP; }
@@ -63,7 +64,6 @@ return_single	","|"!"|"-"|"+"|"*"|"&"|"|"|"="|";"
 	yylval.stringVal = yytext;
 	return CHAR_CONST;
 }
-{return_single}		{ return yytext[0]; }
 
 {white-space}
 <*>\n		   ++lineno;
