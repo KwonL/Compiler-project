@@ -39,10 +39,10 @@ return_single	","|"!"|"-"|"+"|"*"|"&"|"|"|"="|";"|"("|")"|"{"|"}"|"["|"]"
 "break"	{return BREAK; }
 "continue"	{ return CONTINUE; }
 {return_single}		{ return yytext[0]; }
-["+="|"-="|"*="|"/="|"%="]	{ return ASSINGOP; }
+"+="|"-="|"*="|"/="|"%="	{ return ASSINGOP; }
 "||"	{ return LOGICAL_OR; }
 "&&"	{ return LOGICAL_AND; }
-["<"|"<="|">"|">="]	{return RELOP; }
+"<"|"<="|">"|">="	{return RELOP; }
 "=="	{ return EQUOP; }
 "++"	{ return PLUS_PLUS; }
 "--"	{return MINUS_MINUS; }
