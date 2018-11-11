@@ -18,7 +18,7 @@ id		{letter}({letter}|{digit})*
 integer_const	([1-9]+{digit}*)|0
 white-space		[ \t]+
 special-char	\\[nt]
-return_single	","|"!"|"-"|"+"|"*"|"&"|"|"|"="|";"|"("|")"|"{"|"}"|"["|"]"
+return_single	","|"!"|"-"|"+"|"*"|"&"|"|"|"="|";"|"("|")"|"{"|"}"|"["|"]"|"/"|"%"
 
 
 %x COMMENT
