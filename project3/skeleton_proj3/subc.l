@@ -18,34 +18,55 @@ id		{letter}({letter}|{digit})*
 integer_const	([1-9]{digit}*)|"0"
 white-space		[ \t]+
 special-char	\\[nt]
+return_single	","|"!"|"-"|"+"|"*"|"&"|"|"|"="|";"|"("|")"|"{"|"}"|"["|"]"|"/"|"%"|"."
 
 
 %x COMMENT
 %%
+{integer_const}	{
+	yylval.intVal = atoi(yytext);
+	return INTEGER_CONST;
+}
+"->"	{return STRUCTOP; }
 "int" 	|
 "char"	{ return TYPE; }
+"void"	{ return VOID; }
 "struct" 	{ return STRUCT;}
+"return"	{ return RETURN; }
+"if"	{ return IF; }
+"else"	{ return ELSE; }
+"while"	{ return WHILE; }
+"for"	{return FOR; }
+"break"	{return BREAK; }
+"continue"	{ return CONTINUE; }
+{return_single}		{ return yytext[0]; }
+"||"	{ return LOGICAL_OR; }
+"&&"	{ return LOGICAL_AND; }
+"<"|"<="|">"|">="	{return RELOP; }
+"=="|"!="	{ return EQUOP; }
+"++"	{ return INCOP; }
+"--"	{return DECOP; }
 {id}	{
-		   struct id *entered  = enter(ID, yytext, yyleng);
-		   yylval.stringVal = entered->name;
-		   return entered->lextype;
-		}
-{integer_const}	{
-		   yylval.intVal = atoi(yytext);
-		   return INTEGER_CONST;
-		}
+	// search if already entered
+	struct id * entered = lookup(yytext);
+	if (entered == NULL) {
+		// enter new token
+		entered  = enter(ID, yytext, yyleng);
+	}
+	// return token
+	yylval.stringVal = entered->name;
+	return entered->lextype;
+}
 \"({special-char}|[^\\\"\n])*\"	{
-			/* String Variable */
-		   yylval.stringVal = yytext;
-		   return STRING;
-		}
+	/* String Variable */
+	yylval.stringVal = yytext;
+	return STRING;
+}
 '({special-char}|[^\\'\n])'	{
-			/* Character Variable */
-		   yylval.stringVal = yytext;
-		   return CHAR_CONST;
-		}
-","		{ return ','; }
-";"		{ return yytext[0]; }
+	/* Character Variable */
+	yylval.stringVal = yytext;
+	return CHAR_CONST;
+}
 
 {white-space}
 <*>\n		   ++lineno;
