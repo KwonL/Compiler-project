@@ -71,6 +71,7 @@ int read_line();
 
 /* For semantic analysis */
 struct decl* maketypedecl(int type);
+struct decl* makevardecl(struct decl* typedecl);
 void declare(struct id* arg_id, struct decl* arg_decl);
 
 /* type decl */

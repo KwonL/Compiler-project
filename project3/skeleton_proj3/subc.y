@@ -39,6 +39,7 @@ int    yyerror (char* s);
 %token 				STRUCT
 %token<stringVal>	CHAR_CONST STRING
 %token<intVal>		INTEGER_CONST
+%type<intVal> pointers
 %token              RETURN
 %type<declPtr>		type_specifier struct_specifier unary binary expr expr_e or_expr or_list and_expr and_list const_expr args func_decl
 %token<idPtr>		ID INT CHAR TYPE VOID
@@ -99,8 +100,12 @@ def_list    /* list of definitions, definition can be type(struct), variable, fu
 		| /* empty */
 
 def
-		: type_specifier pointers ID ';'
-		| type_specifier pointers ID '[' const_expr ']' ';'
+		: type_specifier pointers ID ';' {
+			declare($2, makevardecl($1));
+		}
+		| type_specifier pointers ID '[' const_expr ']' ';' {
+			// declare($3, makeconstdecl(makearraydecl($5, makevardecl(makepointerdecl($2, $1)))));
+		}
 		| type_specifier ';'
 		| func_decl ';'
 
@@ -193,6 +198,7 @@ int    yyerror (char* s)
 }
 
 void print_error(const char *s) {
+	printf("error : %s\n", s);
 	return;
 }
 
@@ -215,6 +221,17 @@ struct decl* maketypedecl(int type) {
 	return new_node;
 }
 
+struct decl* makevardecl(struct decl* typedecl) {
+	struct decl* new_node = (struct decl *)malloc(sizeof(struct decl));
+
+	new_node->declclass = 0; // VAR
+	new_node->type = typedecl;
+	new_node->size = 1;
+	new_node->origin = new_node;
+
+	return new_node;
+}
+
 void declare(struct id* arg_id, struct decl* arg_decl) {
 	/*
 	 * This is for debugging
@@ -233,8 +250,10 @@ void declare(struct id* arg_id, struct decl* arg_decl) {
 	// Checking redeclaration
 	struct ste* cur_node = top->ste;
 	while(cur_node != NULL){
+		// There is no insertion in this scope
 		if(top->prev!=NULL && cur_node == top->prev->ste)
 			break;
+		// redecl
 		if(cur_node->name == arg_id && !(cur_node->decl == arg_decl->type) ){
 			print_error("redeclaration");
 			return;
