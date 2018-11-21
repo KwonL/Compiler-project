@@ -8,6 +8,7 @@
 #include "subc.tab.h"
 static int comment_depth = 0;
 static int lineno = 1;
+static char filename[100] = { 0 };
 
 %}
 
@@ -27,25 +28,6 @@ return_single	","|"!"|"-"|"+"|"*"|"&"|"|"|"="|";"|"("|")"|"{"|"}"|"["|"]"|"/"|"%
 	yylval.intVal = atoi(yytext);
 	return INTEGER_CONST;
 }
-"->"	{return STRUCTOP; }
-"int" 	|
-"char"	{ return TYPE; }
-"void"	{ return VOID; }
-"struct" 	{ return STRUCT;}
-"return"	{ return RETURN; }
-"if"	{ return IF; }
-"else"	{ return ELSE; }
-"while"	{ return WHILE; }
-"for"	{return FOR; }
-"break"	{return BREAK; }
-"continue"	{ return CONTINUE; }
-{return_single}		{ return yytext[0]; }
-"||"	{ return LOGICAL_OR; }
-"&&"	{ return LOGICAL_AND; }
-"<"|"<="|">"|">="	{return RELOP; }
-"=="|"!="	{ return EQUOP; }
-"++"	{ return INCOP; }
-"--"	{return DECOP; }
 {id}	{
 	// search if already entered
 	struct id * entered = lookup(yytext);
@@ -55,8 +37,18 @@ return_single	","|"!"|"-"|"+"|"*"|"&"|"|"|"="|";"|"("|")"|"{"|"}"|"["|"]"|"/"|"%
 	}
 	// return token
 	yylval.stringVal = entered->name;
+	yylval.idPtr = entered;
+
 	return entered->lextype;
 }
+"->"	{return STRUCTOP; }
+{return_single}		{ return yytext[0]; }
+"||"	{ return LOGICAL_OR; }
+"&&"	{ return LOGICAL_AND; }
+"<"|"<="|">"|">="	{return RELOP; }
+"=="|"!="	{ return EQUOP; }
+"++"	{ return INCOP; }
+"--"	{return DECOP; }
 \"({special-char}|[^\\\"\n])*\"	{
 	/* String Variable */
 	yylval.stringVal = yytext;
@@ -84,21 +76,48 @@ int read_line()
 {
    return lineno;
 }
+
+char* get_filename() {
+	return filename;
+}
+
+
+void init_type()
+{
+	inttype = maketypedecl(INT);
+	chartype = maketypedecl(CHAR);
+	voidtype = maketypedecl(VOID);
+
+	declare(lookup("int"), inttype);
+	declare(lookup("char"), chartype);
+	declare(lookup("void"), voidtype);
+
+	returnid = enter(ID, "*return", 7);
+}
+
+
    
 int main(int argc, char* argv[])
 {
-   static char *keyword[] = { "int", NULL };
-   static int tokentype[] = { TYPE, 0 };
+   static char *keyword[] = { "int","char", "void", "struct", "return", "if", "else", "while", "for", "break", "continue", NULL };
+   static int tokentype[] = { TYPE, TYPE, VOID, STRUCT, RETURN, IF, ELSE, WHILE, FOR, BREAK, CONTINUE, 0 };
    int i;
    for(i = 0; keyword[i] != NULL; i++)
       enter(tokentype[i], keyword[i], strlen(keyword[i]));
 
-   if(argc >= 2) yyin = fopen(argv[1], "r");
+   if(argc >= 2) {
+	   yyin = fopen(argv[1], "r");
+	   strcpy(argv[1], filename);
+   }
    else yyin = stdin;
    if(!yyin) {
       printf("Can't open input stream!\n");
       exit(1);
    }
+
+   // Initialize
+   push_scope();
+   init_type();
 	
    yyparse();
    fclose(yyin);

@@ -2,6 +2,7 @@
  * File Name    : hash.c
  * Description
  *      This is an implementation file for the open hash table.
+ * 		Actually, Not a hash table. I implemented this table as linked list
  *
  ****************************************************************/
 

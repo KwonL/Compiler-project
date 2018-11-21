@@ -14,8 +14,12 @@ int    yyerror (char* s);
 
 /* yylval types */
 %union {
-	int		intVal;
-	char	*stringVal;
+	int		 intVal;
+	double		 floatVal;
+	char		*stringVal;
+	struct id	*idPtr;
+	struct decl	*declPtr;
+	struct ste	*stePtr;
 }
 
 /* Precedences and Associativities */
@@ -32,10 +36,12 @@ int    yyerror (char* s);
 %left 	STRUCTOP '[' ']' '(' ')'  '.'
 
 /* Token and Types */
-%token 				TYPE STRUCT VOID
-%token<stringVal>	ID CHAR_CONST STRING
+%token 				STRUCT
+%token<stringVal>	CHAR_CONST STRING
 %token<intVal>		INTEGER_CONST
 %token              RETURN
+%type<declPtr>		type_specifier struct_specifier unary binary expr expr_e or_expr or_list and_expr and_list const_expr args func_decl
+%token<idPtr>		ID INT CHAR TYPE VOID
 // ELSE and THEN have no associativity. ELSE has higher precedence, so can resolve conflict
 %nonassoc               THEN
 %nonassoc              ELSE
@@ -186,3 +192,66 @@ int    yyerror (char* s)
 	fprintf (stderr, "%s\n", s);
 }
 
+void print_error(const char *s) {
+	return;
+}
+
+struct decl* maketypedecl(int type) {
+    struct decl* new_node = (struct decl *)malloc(sizeof(struct decl));
+
+    new_node->declclass = 3; // TYPE
+	switch (type) {
+		case INT :
+			new_node->typeclass = 0;
+			break;
+		case CHAR :
+			new_node->typeclass = 1;
+			break;
+		case VOID :
+			new_node->typeclass = 5;
+			break;
+	}
+
+	return new_node;
+}
+
+void declare(struct id* arg_id, struct decl* arg_decl) {
+	/*
+	 * This is for debugging
+	 */
+	// printf("declare called!\n");
+	// struct ste* test_node = top->ste; 
+	// while (test_node != NULL) {
+	// 	printf("cur node's name is : %s\n", test_node->name->name);
+	// 	test_node = test_node->prev;
+	// }
+	// if (arg_id == NULL || arg_decl == NULL) return;
+
+	struct ste* ste_top = top->ste;
+	struct ste* new_ste = (struct ste *)malloc(sizeof(struct ste));
+
+	// Checking redeclaration
+	struct ste* cur_node = top->ste;
+	while(cur_node != NULL){
+		if(top->prev!=NULL && cur_node == top->prev->ste)
+			break;
+		if(cur_node->name == arg_id && !(cur_node->decl == arg_decl->type) ){
+			print_error("redeclaration");
+			return;
+		}
+		cur_node = cur_node->prev;
+	}
+
+	// Is global?
+	arg_decl->isglobal = (top->prev == NULL);
+
+	// Push decl to the top of ste
+	new_ste->prev = ste_top;
+	top->ste = new_ste;
+
+	// Set value of ste node
+	top->ste->decl = arg_decl;
+	top->ste->name = arg_id;
+
+	return;
+}
