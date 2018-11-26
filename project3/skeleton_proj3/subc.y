@@ -236,12 +236,48 @@ binary
 					print_error("not comparable");
 			}
 		}
-		| binary EQUOP binary
-		| binary '+' binary {
-			$$ = clonedecl($1);
+		| binary EQUOP binary {
+			$$ = makeconstdecl(inttype);
+			if ($1->type != inttype && $3->type != chartype) {
+				print_error("not int or char type");
+			} else {
+				if ($1->type != $3->type) 
+					print_error("not comparable");
+			}
 		}
-		| binary '-' binary
-		| unary %prec '='
+		| binary '+' binary {
+			if ($1->type->typeclass == 3 && $3->type->typeclass == 0) {
+				// pointer + int
+				$$ = clonedecl($1);
+			}
+			else if ($1->type->typeclass == 0 && $3->type->typeclass == 3) {
+				// int + pointer 
+				$$ = clonedecl($3);
+			}
+			else if ($1->type->typeclass == 0 && $3->type->typeclass == 0) {
+				// int + int 
+				$$ = clonedecl($1);
+			}
+			else {
+				print_error("not computable");
+			}
+		}
+		| binary '-' binary {
+			if ($1->type->typeclass == 3 && $3->type->typeclass == 0) {
+				// pointer + int
+				$$ = clonedecl($1);
+			}
+			else if ($1->type->typeclass == 0 && $3->type->typeclass == 0) {
+				// int + int 
+				$$ = clonedecl($1);
+			}
+			else {
+				print_error("not computable");
+			}
+		}
+		| unary %prec '=' {
+			$$ = $1;
+		}
 
 unary
 		: '(' expr ')' {
