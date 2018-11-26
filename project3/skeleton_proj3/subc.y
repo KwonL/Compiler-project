@@ -82,7 +82,7 @@ ext_def
 
 type_specifier
 		: TYPE {
-			$$ = lookup_stack($1);
+			$$ = lookup_whole($1);
 		}
 		| VOID {
 			$$ = voidtype;
@@ -92,12 +92,20 @@ type_specifier
 		}
 
 struct_specifier
-		: STRUCT ID '{' { push_scope(); } def_list '}' {
+		: STRUCT ID {
 			// Check if there are already declared struct
 			check_struct_isdefined($2);
+		} '{' { push_scope(); } def_list '}' {
 
 			struct ste* fieldlist = pop_scope();
 			struct ste* cur = fieldlist;
+			while (cur != NULL) {
+				// re push struct id
+				if (cur->decl->typeclass == 4) {
+					insert(cur->name, cur->decl);
+				}
+				cur = cur->prev;
+			}
 			declare($2, $$ = makestructdecl(fieldlist));
 		}
 		| STRUCT ID {
@@ -192,8 +200,8 @@ const_expr
 
 expr
 		: unary '=' expr {
-			if ($1->declclass != 0) print_error("LHS is not a variable");
-			if ($3->declclass != 0 && $3->declclass != 1) {
+			if ($1 == NULL || $1->declclass != 0) print_error("LHS is not a variable");
+			if ($3 == NULL || $3->declclass != 0 && $3->declclass != 1) {
 				print_error("RHS is not a const or variable");
 			}
 			else 
@@ -332,7 +340,7 @@ unary
 		| '&' unary	%prec '!' {
 			$$ = addpointer($2);
 
-			if ($2->type != inttype && $2->type != chartype) {
+			if ($2->type != inttype && $2->type != chartype && ($2->type != NULL && $2->type->typeclass != 4)) {
 				print_error("not variable");
 			}
 		}
@@ -342,9 +350,11 @@ unary
 		| unary '[' expr ']' {
 			$$ = reference_array($1, $3);
 		}
-		| unary '.' ID
+		| unary '.' ID {
+			$$ = reference_struct($1, $3);
+		}
 		| unary STRUCTOP ID {
-
+			$$ = reference_struct(reference_ptr($1), $3);
 		}
 		| unary '(' args ')'
 		| unary '(' ')' {
@@ -533,6 +543,7 @@ struct decl* makestructdecl(struct ste* arg_list) {
 	// Iterating over arg list to cacluate size
 	struct ste* current = arg_list;
 	while (current != NULL) {
+		// printf("%d: cur node's name is : %s\n", read_line(), current->name->name);
 		new_node->size += current->decl->size;
 
 		current = current->prev;
@@ -542,7 +553,7 @@ struct decl* makestructdecl(struct ste* arg_list) {
 }
 
 struct decl* findcurrentdecl(struct id* arg_id) {
-	return lookup_stack(arg_id);
+	return lookup_whole(arg_id);
 }
 
 void check_is_struct_type(struct decl* arg_decl) {
@@ -595,6 +606,7 @@ void check_incable(struct decl* arg_decl) {
 }
 
 struct decl* reference_ptr(struct decl * arg_decl) {
+	if (arg_decl == NULL) return NULL;
 	struct decl* new_node = (struct decl *)malloc(sizeof(struct decl));
 
 	// printf("%d: argdecl class = %d\n", read_line(), arg_decl->declclass);
@@ -661,6 +673,31 @@ void check_compatibility(struct decl* arg1, struct decl* arg2) {
 	print_error("LHS and RHS are not same type");
 }
 
+struct decl* reference_struct(struct decl* struct_name, struct id* member) {
+	if (struct_name == NULL) 
+		return NULL;
+	// Not a struct
+	if (struct_name->type != NULL && struct_name->type->typeclass != 4) {
+		print_error("variable is not struct");
+
+		return NULL;
+	}
+
+	struct ste* cur_node = struct_name->type->fieldlist;
+	// printf("%d: cur node : %p\n", read_line(), cur_node);
+	while (cur_node != NULL) {
+		// printf("cur node is %s\n", cur_node->name->name);
+		if (cur_node->name == member) {
+			// printf("%d: member's name is : %s\n", read_line(), cur_node->name->name);
+			return cur_node->decl;
+		}
+		cur_node = cur_node->prev;
+	}
+
+	print_error("struct not have same name field");
+	return NULL;
+}
+
 void declare(struct id* arg_id, struct decl* arg_decl) {	
 	struct ste* ste_top = top->ste;
 	struct ste* new_ste = (struct ste *)malloc(sizeof(struct ste));
@@ -673,7 +710,10 @@ void declare(struct id* arg_id, struct decl* arg_decl) {
 			break;
 		// redecl
 		if(cur_node->name == arg_id && !(cur_node->decl == arg_decl->type) ){
-			print_error("redeclaration");
+			// check struct decl in other function
+			if (cur_node->decl->typeclass != 4) {
+				print_error("redeclaration");
+			}
 			return;
 		}
 		cur_node = cur_node->prev;
@@ -695,7 +735,7 @@ void declare(struct id* arg_id, struct decl* arg_decl) {
 	 */
 	// struct ste* test_node = top->ste; 
 	// while (test_node != NULL) {
-	// 	printf("cur node's name is : %s\n", test_node->name->name);
+	// 	printf("%d: cur node's name is : %s\n", read_line(), test_node->name->name);
 	// 	test_node = test_node->prev;
 	// }
 	// if (arg_id == NULL || arg_decl == NULL) return;

@@ -61,6 +61,7 @@ void insert(struct id* arg_id, struct decl* arg_decl);
 struct ste* pop_scope();
 void free_ste_list(struct ste* list);
 struct decl* lookup_stack(struct id* arg_id);
+struct decl* lookup_whole(struct id* arg_id);
 
 /* For hash table */
 unsigned hash(char *name);
@@ -88,6 +89,7 @@ void check_incable(struct decl* arg_decl);
 struct decl* reference_ptr(struct decl * arg_decl);
 struct decl* reference_array(struct decl* ptr_decl, struct decl* const_decl);
 void check_compatibility(struct decl* arg1, struct decl* arg2);
+struct decl* reference_struct(struct decl* struct_name, struct id* member);
 void declare(struct id* arg_id, struct decl* arg_decl);
 
 /* type decl */

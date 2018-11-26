@@ -120,3 +120,16 @@ struct decl* lookup_stack(struct id* arg_id) {
     
     return NULL;
 }
+
+struct decl* lookup_whole(struct id* arg_id) {
+    struct ste* cur_node = top->ste;
+
+    while (cur_node != NULL) {
+        if(cur_node->name == arg_id) {
+            return cur_node->decl;
+        }
+        cur_node = cur_node->prev;
+    }
+
+    return NULL;
+}
