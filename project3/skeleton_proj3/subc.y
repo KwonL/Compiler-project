@@ -169,7 +169,11 @@ def
 		}
 
 compound_stmt
-		: '{' local_defs stmt_list '}'
+		: '{' {
+			push_scope();
+		} local_defs stmt_list '}' {
+			pop_scope();
+		}
 
 local_defs  /* local definitions, of which scope is only inside of compound statement */
 		:	def_list
@@ -602,7 +606,7 @@ void check_incable(struct decl* arg_decl) {
 		return;
 
 	// printf("%d: arg_decl class is %d\n", read_line(), arg_decl->declclass);
-	print_error("not int, char or pointer type");
+	print_error("not int or char or pointer type");
 }
 
 struct decl* reference_ptr(struct decl * arg_decl) {
@@ -699,25 +703,17 @@ struct decl* reference_struct(struct decl* struct_name, struct id* member) {
 }
 
 void declare(struct id* arg_id, struct decl* arg_decl) {	
+	// Checking redeclaration
+	struct decl* tmp_decl = NULL;
+	if ((tmp_decl = lookup_stack(arg_id)) != NULL){
+		// check struct decl in other function
+		if (tmp_decl->typeclass != 4) {
+			print_error("redeclaration");
+		}
+		return;
+	}
 	struct ste* ste_top = top->ste;
 	struct ste* new_ste = (struct ste *)malloc(sizeof(struct ste));
-
-	// Checking redeclaration
-	struct ste* cur_node = top->ste;
-	while(cur_node != NULL){
-		// There is no insertion in this scope
-		if(top->prev!=NULL && cur_node == top->prev->ste)
-			break;
-		// redecl
-		if(cur_node->name == arg_id && !(cur_node->decl == arg_decl->type) ){
-			// check struct decl in other function
-			if (cur_node->decl->typeclass != 4) {
-				print_error("redeclaration");
-			}
-			return;
-		}
-		cur_node = cur_node->prev;
-	}
 
 	// Is global?
 	arg_decl->isglobal = (top->prev == NULL);
