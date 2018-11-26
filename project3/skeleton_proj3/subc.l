@@ -78,7 +78,7 @@ int read_line()
 }
 
 char* get_filename() {
-	return filename;
+	return (char *)filename;
 }
 
 
@@ -107,7 +107,7 @@ int main(int argc, char* argv[])
 
    if(argc >= 2) {
 	   yyin = fopen(argv[1], "r");
-	   strcpy(argv[1], filename);
+	   strcpy(filename, argv[1]);
    }
    else yyin = stdin;
    if(!yyin) {

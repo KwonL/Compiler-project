@@ -15,9 +15,7 @@ void push_scope() {
         cur_node->ste = NULL;
     }
 
-    if (top == NULL) {
-        top = cur_node;
-    }
+    top = cur_node;
 
     return;
 }
@@ -39,26 +37,50 @@ struct ste* pop_scope() {
     struct ste* cur_node = top->ste;
     struct ste* ste_top = top->ste;
 
-    // There is only one node, Just return all ste
-    if (top->prev == NULL) {
-        free(top);
-        return cur_node;
-    }
-
-    while (cur_node != top->prev->ste) {
+    // detach nodes from stack
+    // printf("top->prev is : %p\n", top->prev);
+    while (cur_node->prev != top->prev->ste) {
         cur_node = cur_node->prev;
     }
+    cur_node->prev = NULL;
+    // printf("checking\n");
     
     // There was no insertion on this scope
     if (ste_top == top->prev->ste) return NULL;
-    
-    cur_node->prev = NULL;
-    struct stack_node* prev = top->prev;
-    prev->next = NULL;
-    free(top);
-    top = prev;
 
-    return ste_top;
+    // Reverse list
+    // cur_node point to end of this scope's ste
+    struct ste* prev   = NULL; 
+    struct ste* current = top->ste; 
+    struct ste* next = NULL; 
+    struct ste* ret = NULL;
+    while (current != NULL) { 
+        // Store next 
+        next  = current->prev;   
+  
+        // Reverse current node's pointer 
+        current->prev = prev;    
+  
+        // Move pointers one position ahead. 
+        prev = current; 
+        current = next; 
+    } 
+    ret = prev;
+
+    // Free scope stack top
+    struct stack_node* prev_stack = top->prev;
+    prev_stack->next = NULL;
+    free(top);
+    top = prev_stack;
+
+    /* for debug */
+    // current = ret; 
+    // while (current != NULL) {
+    //     printf("Now node is %s\n", current->name->name);
+    //     current = current->prev;
+    // }
+
+    return ret;
 }
 
 void free_ste_list(struct ste* list) {
@@ -75,11 +97,21 @@ void free_ste_list(struct ste* list) {
 
 struct decl* lookup_stack(struct id* arg_id) {
     // empty stack
+    // printf("lineno : %d\n", read_line());
     if (top == NULL || top->ste == NULL) return NULL;
+    if (arg_id == NULL) return NULL;
+	/*
+	 * This is for debugging
+	 */
+	// struct ste* test_node = top->ste; 
+	// while (test_node != NULL) {
+	// 	printf("cur node's name is : %s\n", test_node->name->name);
+	// 	test_node = test_node->prev;
+	// }
 
     struct ste* cur_node = top->ste;
     // Top Down searching
-    while (cur_node != NULL) {
+    while (cur_node != NULL && (top->prev != NULL ? (cur_node != top->prev->ste) : 1)) {
         if (cur_node->name == arg_id) {
             return cur_node->decl;
         }

@@ -72,6 +72,22 @@ int read_line();
 /* For semantic analysis */
 struct decl* maketypedecl(int type);
 struct decl* makevardecl(struct decl* typedecl);
+struct decl* makepointerdecl(int isPtr, struct decl* typedecl);
+struct decl* makearraydecl(struct decl* const_decl, struct decl* var_decl);
+struct decl* makeconstdecl(struct decl* type_decl) ;
+struct decl* makeintconstdecl(int int_const);
+struct decl* makecharconstdecl(char* char_const);
+struct decl* clonedecl(struct decl*);
+void check_struct_isdefined(struct id* arg_id);
+struct decl* makestructdecl(struct ste* arg_list);
+struct decl* findcurrentdecl(struct id* arg_id);
+void check_is_struct_type(struct decl* arg_decl);
+struct decl* makeprocdecl();
+struct decl* addpointer(struct decl* arg_decl);
+void check_incable(struct decl* arg_decl);
+struct decl* reference_ptr(struct decl * arg_decl);
+struct decl* reference_array(struct decl* ptr_decl, struct decl* const_decl);
+void check_compatibility(struct decl* arg1, struct decl* arg2);
 void declare(struct id* arg_id, struct decl* arg_decl);
 
 /* type decl */
@@ -80,6 +96,10 @@ struct decl* chartype;
 struct decl* voidtype;
 struct id* returnid;
 
+/* file name , readline */
+int read_line();
+char* get_filename();
+void print_error(const char*);
 
 #endif
 
