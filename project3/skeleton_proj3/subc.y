@@ -129,10 +129,12 @@ struct_specifier
 
 func_decl
 		: type_specifier pointers ID '(' ')' {
-			struct decl* procdecl = makeprocdecl();
+			struct decl* procdecl;
 			// Declare if there is no redeclaration
-			if (lookup_whole($3) == NULL) 
+			if ((procdecl = lookup_whole($3)) == NULL) {
+				procdecl = makeprocdecl();
 				declare($3, procdecl);
+			}
 			push_scope(); 
 			declare(returnid, makepointerdecl($2, $1));
 
@@ -143,10 +145,12 @@ func_decl
 			$$ = procdecl;
 		}
 		| type_specifier pointers ID '(' VOID ')' {
-			struct decl* procdecl = makeprocdecl();
+			struct decl* procdecl;
 			// Declare if there is no redeclaration
-			if (lookup_whole($3) == NULL) 
+			if ((procdecl = lookup_whole($3)) == NULL) {
+				procdecl = makeprocdecl();
 				declare($3, procdecl);
+			}
 			push_scope(); 
 			declare(returnid, makepointerdecl($2, $1));
 
@@ -157,9 +161,12 @@ func_decl
 			$$ = procdecl;
 		}
 		| type_specifier pointers ID '(' {
-			struct decl* procdecl = makeprocdecl();
-			if (lookup_whole($3) == NULL)
+			struct decl* procdecl;
+			// Declare if there is no redeclaration
+			if ((procdecl = lookup_whole($3)) == NULL) {
+				procdecl = makeprocdecl();
 				declare($3, procdecl);
+			}
 			push_scope();
 			declare(returnid, makepointerdecl($2, $1));
 			$<declPtr>$ = procdecl;
