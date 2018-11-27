@@ -99,8 +99,8 @@ void init_type()
    
 int main(int argc, char* argv[])
 {
-   static char *keyword[] = { "int","char", "void", "struct", "return", "if", "else", "while", "for", "break", "continue", NULL };
-   static int tokentype[] = { TYPE, TYPE, VOID, STRUCT, RETURN, IF, ELSE, WHILE, FOR, BREAK, CONTINUE, 0 };
+   static char *keyword[] = { "int","char", "void", "struct", "return", "if", "else", "while", "for", "break", "continue", "NULL", NULL };
+   static int tokentype[] = { TYPE, TYPE, VOID, STRUCT, RETURN, IF, ELSE, WHILE, FOR, BREAK, CONTINUE, NULL_TOKEN, 0 };
    int i;
    for(i = 0; keyword[i] != NULL; i++)
       enter(tokentype[i], keyword[i], strlen(keyword[i]));

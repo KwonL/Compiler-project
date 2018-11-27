@@ -41,6 +41,7 @@ int    yyerror (char* s);
 %token<intVal>		INTEGER_CONST
 %type<intVal> pointers
 %token              RETURN
+%token				NULL_TOKEN
 %type<declPtr>		type_specifier struct_specifier unary binary expr expr_e or_expr or_list and_expr and_list const_expr args func_decl
 %token<idPtr>		ID INT CHAR TYPE VOID
 // ELSE and THEN have no associativity. ELSE has higher precedence, so can resolve conflict
@@ -84,7 +85,7 @@ ext_def
 			push_scope();
 			struct ste* stelist = $1->formals;
 			while(stelist != NULL) {
-				declare(stelist->name, stelist->decl);
+				declare_struct(stelist->name, stelist->decl);
 				stelist = stelist->prev;
 			}
 		}  compound_stmt {
@@ -113,15 +114,15 @@ struct_specifier
 			struct ste* cur = fieldlist;
 			while (cur != NULL) {
 				// re push struct id
-				if (cur->decl->typeclass == 4) {
-					insert(cur->name, cur->decl);
-				}
+				// if (cur->decl->typeclass == 4) {
+				// 	insert(cur->name, cur->decl);
+				// }
 				cur = cur->prev;
 			}
-			declare($2, $$ = makestructdecl(fieldlist));
+			declare_struct($2, $$ = makestructdecl(fieldlist));
 		}
 		| STRUCT ID {
-			struct decl* declptr = findcurrentdecl($2);
+			struct decl* declptr = lookup_whole($2);
 			check_is_struct_type(declptr);
 			$$ = declptr;
 		}
@@ -130,8 +131,8 @@ func_decl
 		: type_specifier pointers ID '(' ')' {
 			struct decl* procdecl = makeprocdecl();
 			// Declare if there is no redeclaration
-			if (lookup_whole($3) == NULL) 
-				declare($3, procdecl);
+			if (lookup_stack($3) == NULL) 
+				declare_struct($3, procdecl);
 			push_scope(); 
 			declare(returnid, makepointerdecl($2, $1));
 
@@ -142,8 +143,8 @@ func_decl
 		| type_specifier pointers ID '(' VOID ')' {
 			struct decl* procdecl = makeprocdecl();
 			// Declare if there is no redeclaration
-			if (lookup_whole($3) == NULL) 
-				declare($3, procdecl);
+			if (lookup_stack($3) == NULL) 
+				declare_struct($3, procdecl);
 			push_scope(); 
 			declare(returnid, makepointerdecl($2, $1));
 
@@ -153,8 +154,8 @@ func_decl
 		}
 		| type_specifier pointers ID '(' {
 			struct decl* procdecl = makeprocdecl();
-			if (lookup_whole($3) == NULL)
-				declare($3, procdecl);
+			if (lookup_stack($3) == NULL)
+				declare_struct($3, procdecl);
 			push_scope();
 			declare(returnid, makepointerdecl($2, $1));
 			$<declPtr>$ = procdecl;
@@ -224,9 +225,22 @@ stmt_list
 
 stmt
 		: expr ';'
-		| compound_stmt
-		| RETURN ';'
-		| RETURN expr ';'
+		| { push_scope(); }compound_stmt { free_ste_list(pop_scope()); }
+		| RETURN ';' {
+			// Check return typ
+			struct decl* func_decl = lookup_func();
+
+			if (func_decl != NULL && func_decl->returntype != voidtype) {
+				print_error("return value is not return type");
+			}
+		}
+		| RETURN expr ';' {
+			struct decl* func_decl = lookup_func();
+
+			if (func_decl != NULL && func_decl->returntype != $2->type) {
+				print_error("return value is not return type");
+			}
+		}
 		| ';'
 		| IF '(' expr ')' stmt %prec THEN
 		| IF '(' expr ')' stmt ELSE stmt
@@ -262,7 +276,12 @@ or_expr
 		}
 
 or_list
-		: or_list LOGICAL_OR and_expr
+		: or_list LOGICAL_OR and_expr {
+			if ($1->type != inttype || $3->type != inttype) 
+				print_error("not int type");
+
+			$$ = $1;
+		}
 		| and_expr {
 			$$ = $1;
 		}
@@ -273,7 +292,12 @@ and_expr
 		}
 
 and_list
-		: and_list LOGICAL_AND binary
+		: and_list LOGICAL_AND binary {
+			if ($1->type != inttype || $3->type != inttype) 
+				print_error("not int type");
+
+			$$ = makeconstdecl(inttype);
+		}
 		| binary {
 			$$ = $1;
 		}
@@ -281,7 +305,7 @@ and_list
 binary
 		: binary RELOP binary {
 			$$ = makeconstdecl(inttype);
-			if ($1->type != inttype && $3->type != chartype) {
+			if ($1->type != inttype && $1->type != chartype || $3->type != inttype && $3->type != chartype) {
 				print_error("not int or char type");
 			} else {
 				if ($1->type != $3->type) 
@@ -290,23 +314,19 @@ binary
 		}
 		| binary EQUOP binary {
 			$$ = makeconstdecl(inttype);
-			if ($1->type != inttype && $3->type != chartype) {
-				print_error("not int or char type");
-			} else {
-				if ($1->type != $3->type) 
+			if ($1->type != inttype && $1->type != chartype && $1->type->typeclass != 3 || $3->type != inttype && $3->type != chartype && $3->type->typeclass != 3) {
+				print_error("not int or char or pointer type");
+			} 
+			if ($1->type->typeclass == 3 && $3->type->typeclass == 3) {
+				if (!check_compatibility($1, $3, 0)) {
 					print_error("not comparable");
+				}
 			}
+			else if ($1->type != $3->type) 
+				print_error("not comparable");
 		}
 		| binary '+' binary {
-			if ($1->type->typeclass == 3 && $3->type->typeclass == 0) {
-				// pointer + int
-				$$ = clonedecl($1);
-			}
-			else if ($1->type->typeclass == 0 && $3->type->typeclass == 3) {
-				// int + pointer 
-				$$ = clonedecl($3);
-			}
-			else if ($1->type->typeclass == 0 && $3->type->typeclass == 0) {
+			if ($1->type->typeclass == 0 && $3->type->typeclass == 0) {
 				// int + int 
 				$$ = clonedecl($1);
 			}
@@ -315,11 +335,7 @@ binary
 			}
 		}
 		| binary '-' binary {
-			if ($1->type->typeclass == 3 && $3->type->typeclass == 0) {
-				// pointer + int
-				$$ = clonedecl($1);
-			}
-			else if ($1->type->typeclass == 0 && $3->type->typeclass == 0) {
+			if ($1->type->typeclass == 0 && $3->type->typeclass == 0) {
 				// int + int 
 				$$ = clonedecl($1);
 			}
@@ -346,6 +362,9 @@ unary
 		}
 		| STRING {
 			$$ = addpointer(makecharconstdecl($1)); 
+		}
+		| NULL_TOKEN {
+			$$ = makeconstdecl(makepointerdecl(1, voidtype));
 		}
 		| ID {
 			$$ = clonedecl(lookup_whole($1));
@@ -523,7 +542,7 @@ struct decl* makearraydecl(struct decl* const_decl, struct decl* var_decl) {
 
 	// Have to check if index is really const
 	if (const_decl->declclass != 1) {
-		print_error("not const\n");
+		print_error("not const or variable\n");
 	}
 
 	// Have to check if const value is int
@@ -545,7 +564,7 @@ struct decl* makeconstdecl(struct decl* type_decl) {
 
 	new_node->declclass = 1; // CONST
 	new_node->type = type_decl;
-	new_node->size = type_decl->size;
+	new_node->size = type_decl != NULL ? type_decl->size : 0;
 	new_node->origin = new_node;
 
 	return new_node;
@@ -644,6 +663,8 @@ void add_formals(struct decl* procdecl, struct ste* formals) {
 	if (procdecl == NULL || formals == NULL) 
 		return ;
 
+	printf("%d: add formals called, procdecl is %p\n", read_line(), procdecl);
+
 	// Not yet declared. 
 	if (procdecl->defined == 0) {
 		// printf("%d: return type is : %d\n", read_line(), formals->decl->typeclass);
@@ -654,8 +675,9 @@ void add_formals(struct decl* procdecl, struct ste* formals) {
 	else {
 		struct ste* cur_node = formals;
 		struct ste* form_cursor = procdecl->formals;
+		printf("%d: first formal is %s, return type is %d\n", read_line(), cur_node->name->name, procdecl->returntype->typeclass);
 		if (cur_node->decl->type != procdecl->returntype) {
-			print_error("redeclaration");
+			print_error("return types are not same");
 		}
 		cur_node = cur_node->prev;
 
@@ -696,17 +718,14 @@ struct decl* addpointer(struct decl* arg_decl) {
 }
 
 void check_incable(struct decl* arg_decl) {
-	// Only int, char, ptr can use incop
+	// Only int, char can use incop
 	// printf("arg decl's type class of type = %d\n", arg_decl->type->typeclass);
 	if (arg_decl != NULL && arg_decl->declclass == 0) {
 		if (arg_decl->type == inttype || arg_decl->type == chartype)
 			return;
 	}
-	if (arg_decl != NULL && arg_decl->type->typeclass == 3) 
-		return;
-
 	// printf("%d: arg_decl class is %d\n", read_line(), arg_decl->declclass);
-	print_error("not int or char or pointer type");
+	print_error("not int or char type");
 }
 
 struct decl* reference_ptr(struct decl * arg_decl) {
@@ -729,7 +748,7 @@ struct decl* reference_ptr(struct decl * arg_decl) {
 		}
 		else if (type->typeclass == 3) {
 			// Pointer type
-			// printf("%d: ptrto is : %p, inttyp : %p\n", read_line(), type->ptrto, inttype);
+			// printf("%d: ptrto is : %p, inttype : %p\n", read_line(), type->ptrto, inttype);
 			new_node->type = type->ptrto;
 		}
 		else {
@@ -773,7 +792,7 @@ int check_compatibility(struct decl* arg1, struct decl* arg2, int enable) {
 	}
 	if (arg1->type != NULL && arg2->type !=	NULL) {
 		// both pointer
-		if (arg1->type->typeclass == 3 && arg2->type->typeclass == 3 && arg1->type->ptrto == arg2->type->ptrto) 
+		if (arg1->type->typeclass == 3 && arg2->type->typeclass == 3 && (arg1->type->ptrto == arg2->type->ptrto || arg2->type->ptrto == voidtype)) 
 			return 1;
 		// RHS is array pointer
 		if (arg2->type->typeclass == 2 && arg1->type->ptrto == arg2->type->elementvar->type)
@@ -800,7 +819,7 @@ struct decl* reference_struct(struct decl* struct_name, struct id* member) {
 	struct ste* cur_node = struct_name->type->fieldlist;
 	// printf("%d: cur node : %p\n", read_line(), cur_node);
 	while (cur_node != NULL) {
-		// printf("cur node is %s\n", cur_node->name->name);
+		// printf("%d: cur node is %s, member is : %s\n", read_line(), cur_node->name->name, member->name);
 		if (cur_node->name == member) {
 			// printf("%d: member's name is : %s\n", read_line(), cur_node->name->name);
 			return cur_node->decl;
@@ -822,29 +841,32 @@ void declare(struct id* arg_id, struct decl* arg_decl) {
 		}
 		return;
 	}
-	struct ste* ste_top = top->ste;
-	struct ste* new_ste = (struct ste *)malloc(sizeof(struct ste));
 
-	// Is global?
-	arg_decl->isglobal = (top->prev == NULL);
-
-	// Push decl to the top of ste
-	new_ste->prev = ste_top;
-	top->ste = new_ste;
-
-	// Set value of ste node
-	top->ste->decl = arg_decl;
-	top->ste->name = arg_id;
-
+	insert(arg_id, arg_decl);
 	/*
 	 * This is for debugging
 	 */
-	// struct ste* test_node = top->ste; 
-	// while (test_node != NULL) {
-	// 	printf("%d: cur node's name is : %s\n", read_line(), test_node->name->name);
-	// 	test_node = test_node->prev;
-	// }
-	// if (arg_id == NULL || arg_decl == NULL) return;
+	struct ste* test_node = top->ste; 
+	while (test_node != NULL) {
+		// printf("%d: cur node's name is : %s\n", read_line(), test_node->name->name);
+		test_node = test_node->prev;
+	}
+	if (arg_id == NULL || arg_decl == NULL) return;
 
 	return;
+}
+
+void declare_struct(struct id* arg_id, struct decl* arg_decl) {
+	// Declare struct at bottom of scope
+	struct ste* node = top->ste;
+	struct ste* new_node = (struct ste *)malloc(sizeof(struct ste));
+
+	while (node->prev != NULL) 
+		node = node->prev;
+
+	new_node->name = arg_id;
+	new_node->decl = arg_decl;
+	new_node->prev = NULL;
+
+	node->prev = new_node;
 }

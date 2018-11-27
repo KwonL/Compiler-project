@@ -62,6 +62,7 @@ struct ste* pop_scope();
 void free_ste_list(struct ste* list);
 struct decl* lookup_stack(struct id* arg_id);
 struct decl* lookup_whole(struct id* arg_id);
+struct decl* lookup_func();
 
 /* For hash table */
 unsigned hash(char *name);
@@ -92,6 +93,7 @@ int check_compatibility(struct decl* arg1, struct decl* arg2, int enable);
 struct decl* reference_struct(struct decl* struct_name, struct id* member);
 void add_formals(struct decl* procdecl, struct ste* formals);
 void declare(struct id* arg_id, struct decl* arg_decl);
+void declare_struct(struct id* arg_id, struct decl* arg_decl);
 
 /* type decl */
 struct decl* inttype;

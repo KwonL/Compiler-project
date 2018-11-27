@@ -5,6 +5,7 @@
 #include "subc.h"
 
 void push_scope() {
+    // printf("%d: push scope\n", read_line());
     struct stack_node* cur_node = (struct stack_node *)malloc(sizeof(struct stack_node));
 
     cur_node->next = NULL;
@@ -33,11 +34,21 @@ void insert(struct id* arg_id, struct decl* arg_decl) {
 }
 
 struct ste* pop_scope() {
+    // printf("%d: pop scope\n", read_line());
     if (top == NULL) return NULL;
     struct ste* cur_node = top->ste;
     struct ste* ste_top = top->ste;
 
-    if (ste_top == top->prev->ste) return NULL;
+    // There was no insertion on this scope
+    if (ste_top == top->prev->ste) {
+        // Free scope stack top
+        struct stack_node* prev_node = top->prev;
+        prev_node->next = NULL;
+        free(top);
+        top = prev_node;
+
+        return NULL;
+    }
     // detach nodes from stack
     // printf("%d: top->prev is : %p\n", read_line(), top->prev);
     while (cur_node->prev != top->prev->ste) {
@@ -47,7 +58,6 @@ struct ste* pop_scope() {
     cur_node->prev = NULL;
     // printf("checking\n");
     
-    // There was no insertion on this scope
 
     // Reverse list
     // cur_node point to end of this scope's ste
@@ -75,11 +85,11 @@ struct ste* pop_scope() {
     top = prev_stack;
 
     /* for debug */
-    // current = ret; 
-    // while (current != NULL) {
-    //     printf("Now node is %s\n", current->name->name);
-    //     current = current->prev;
-    // }
+    current = ret; 
+    while (current != NULL) {
+        // printf("%d: Now node is %s\n", read_line(), current->name->name);
+        current = current->prev;
+    }
 
     return ret;
 }
@@ -133,4 +143,19 @@ struct decl* lookup_whole(struct id* arg_id) {
     }
 
     return NULL;
+}
+
+struct decl* lookup_func() {
+    // empty stack
+    struct ste* cur_node = top->ste;
+    struct ste* ret = NULL;
+
+    while (cur_node != NULL) {
+        if (cur_node->decl->declclass == 2) {
+            ret = cur_node;
+        }
+        cur_node = cur_node->prev;
+    }
+    
+    return ret != NULL ? ret->decl : NULL;
 }
