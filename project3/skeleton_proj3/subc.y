@@ -85,7 +85,7 @@ ext_def
 			push_scope();
 			struct ste* stelist = $1->formals;
 			while(stelist != NULL) {
-				declare_struct(stelist->name, stelist->decl);
+				declare(stelist->name, stelist->decl);
 				stelist = stelist->prev;
 			}
 		}  compound_stmt {
@@ -686,7 +686,7 @@ void add_formals(struct decl* procdecl, struct ste* formals) {
 	else {
 		struct ste* cur_node = formals;
 		struct ste* form_cursor = procdecl->formals;
-		printf("%d: first formal is %s, return type is %d\n", read_line(), cur_node->name->name, procdecl->returntype->typeclass);
+		// printf("%d: first formal is %s, return type is %d\n", read_line(), cur_node->name->name, procdecl->returntype->typeclass);
 		if (cur_node->decl->type != procdecl->returntype) {
 			print_error("return types are not same");
 		}
