@@ -37,16 +37,17 @@ struct ste* pop_scope() {
     struct ste* cur_node = top->ste;
     struct ste* ste_top = top->ste;
 
+    if (ste_top == top->prev->ste) return NULL;
     // detach nodes from stack
-    // printf("top->prev is : %p\n", top->prev);
+    // printf("%d: top->prev is : %p\n", read_line(), top->prev);
     while (cur_node->prev != top->prev->ste) {
+        // printf("%d: cur_node is : %s\n", read_line(), cur_node->name->name);
         cur_node = cur_node->prev;
     }
     cur_node->prev = NULL;
     // printf("checking\n");
     
     // There was no insertion on this scope
-    if (ste_top == top->prev->ste) return NULL;
 
     // Reverse list
     // cur_node point to end of this scope's ste

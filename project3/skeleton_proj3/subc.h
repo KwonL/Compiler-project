@@ -31,7 +31,7 @@ struct decl {
     char *char_value;	/* CONST: value of char const			*/
     struct ste *formals;	/* FUNC: ptr to formals list			*/
     struct decl *returntype;	/* FUNC: ptr to return TYPE decl		*/
-    int defined;        /* FUNC: check of function definition           */
+    int defined;        /* FUNC: check of function definition: not declared, declared, defined       */
     int typeclass;	/* TYPE: type class: int, char, array, ptr, struct, void		*/
     struct decl *elementvar;	/* TYPE (array): ptr to element VAR decl	*/
     int num_index;	/* TYPE (array): number of elements		*/
@@ -88,8 +88,9 @@ struct decl* addpointer(struct decl* arg_decl);
 void check_incable(struct decl* arg_decl);
 struct decl* reference_ptr(struct decl * arg_decl);
 struct decl* reference_array(struct decl* ptr_decl, struct decl* const_decl);
-void check_compatibility(struct decl* arg1, struct decl* arg2);
+int check_compatibility(struct decl* arg1, struct decl* arg2, int enable);
 struct decl* reference_struct(struct decl* struct_name, struct id* member);
+void add_formals(struct decl* procdecl, struct ste* formals);
 void declare(struct id* arg_id, struct decl* arg_decl);
 
 /* type decl */

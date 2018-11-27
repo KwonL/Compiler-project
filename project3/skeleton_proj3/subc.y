@@ -71,14 +71,26 @@ ext_def
 		}
 		| func_decl ';' {
 			if ($1->defined != 0) {
-				print_error("function redeclaration");
+				print_error("redeclaration");
+			} else {
+				$1->defined = 1;
 			}
 		}
 		| type_specifier ';' {
 			// do nothing
 		}
-		// TODO here
-		| func_decl  compound_stmt 
+		| func_decl {
+			if ($1->defined == 2) print_error("redeclaration");
+			push_scope();
+			struct ste* stelist = $1->formals;
+			while(stelist != NULL) {
+				declare(stelist->name, stelist->decl);
+				stelist = stelist->prev;
+			}
+		}  compound_stmt {
+			free_ste_list(pop_scope());
+			$1->defined = 2;
+		}
 
 type_specifier
 		: TYPE {
@@ -117,18 +129,42 @@ struct_specifier
 func_decl
 		: type_specifier pointers ID '(' ')' {
 			struct decl* procdecl = makeprocdecl();
-			declare($3, procdecl);
+			// Declare if there is no redeclaration
+			if (lookup_whole($3) == NULL) 
+				declare($3, procdecl);
 			push_scope(); 
 			declare(returnid, makepointerdecl($2, $1));
 
 			struct ste* formals;
 			formals = pop_scope();
-			// add_formals();
-
-			// TODO fucking function..
+			add_formals(procdecl, formals);
 		}
-		| type_specifier pointers ID '(' VOID ')'
-		| type_specifier pointers ID '(' param_list ')'
+		| type_specifier pointers ID '(' VOID ')' {
+			struct decl* procdecl = makeprocdecl();
+			// Declare if there is no redeclaration
+			if (lookup_whole($3) == NULL) 
+				declare($3, procdecl);
+			push_scope(); 
+			declare(returnid, makepointerdecl($2, $1));
+
+			struct ste* formals;
+			formals = pop_scope();
+			add_formals(procdecl, formals);
+		}
+		| type_specifier pointers ID '(' {
+			struct decl* procdecl = makeprocdecl();
+			if (lookup_whole($3) == NULL)
+				declare($3, procdecl);
+			push_scope();
+			declare(returnid, makepointerdecl($2, $1));
+			$<declPtr>$ = procdecl;
+		} param_list ')' {
+			struct ste* formals;
+			struct decl* procdecl = $<declPtr>5;
+			formals = pop_scope();
+			add_formals(procdecl, formals);
+			$$ = procdecl;
+		}
 
 pointers
 		: '*' {
@@ -143,8 +179,12 @@ param_list  /* list of formal parameter declaration */
 		| param_list ',' param_decl
 
 param_decl  /* formal parameter declaration */
-		: type_specifier pointers ID
-		| type_specifier pointers ID '[' const_expr ']'
+		: type_specifier pointers ID {
+			declare($3, makevardecl(makepointerdecl($2, $1)));
+		}
+		| type_specifier pointers ID '[' const_expr ']' {
+			declare($3, makeconstdecl(makearraydecl($5, makevardecl(makepointerdecl($2, $1)))));
+		}
 
 def_list    /* list of definitions, definition can be type(struct), variable, function */
 		: def_list def {
@@ -170,9 +210,9 @@ def
 
 compound_stmt
 		: '{' {
-			push_scope();
+			// push_scope();
 		} local_defs stmt_list '}' {
-			pop_scope();
+			// pop_scope();
 		}
 
 local_defs  /* local definitions, of which scope is only inside of compound statement */
@@ -205,11 +245,11 @@ const_expr
 expr
 		: unary '=' expr {
 			if ($1 == NULL || $1->declclass != 0) print_error("LHS is not a variable");
-			if ($3 == NULL || $3->declclass != 0 && $3->declclass != 1) {
+			if ($3 == NULL || $3->declclass != 0 && $3->declclass != 1 || $3->type == voidtype) {
 				print_error("RHS is not a const or variable");
 			}
 			else 
-				check_compatibility($1, $3);
+				check_compatibility($1, $3, 1);
 			$$ = clonedecl($1);
 		}
 		| or_expr {
@@ -308,7 +348,7 @@ unary
 			$$ = addpointer(makecharconstdecl($1)); 
 		}
 		| ID {
-			$$ = clonedecl(lookup_stack($1));
+			$$ = clonedecl(lookup_whole($1));
 			
 			if ($$ == NULL) print_error("not declared");
 		}
@@ -360,18 +400,50 @@ unary
 		| unary STRUCTOP ID {
 			$$ = reference_struct(reference_ptr($1), $3);
 		}
-		| unary '(' args ')'
+		| unary '(' args ')' {
+			struct decl* arg_list = $3;
+			struct ste* form_cursor = $1->formals;
+			while (arg_list != NULL && form_cursor != NULL) {
+				if (!check_compatibility(arg_list, form_cursor->decl, 0)) {
+					print_error("actual args are not equal to formal args");
+					break;
+				}
+				arg_list = arg_list->next;
+				form_cursor = form_cursor->prev;
+			}
+			if (arg_list != NULL || form_cursor != NULL) {
+				print_error("actual args are not equal to formal args");
+			}
+
+			if ($1 != NULL) 
+				$$ = makeconstdecl($1->returntype);
+			else 
+				$$ = NULL;
+		}
 		| unary '(' ')' {
-			// TODO
+			if ($1 != NULL && $1->declclass != 2) 
+				print_error("not a function");
+			if ($1 != NULL && $1->formals != NULL) {
+				print_error("actual args are not equal to formal args");
+			}
+			if ($1 != NULL) 
+				$$ = makeconstdecl($1->returntype);
+			else 
+				$$ = NULL;
 		}
 
 args    /* actual parameters(function arguments) transferred to function */
 		: expr {
-			$$ = clonedecl($1->type);
+			$$ = clonedecl($1);
+			$$->next = NULL;
 		}
 		| args ',' expr {
-			$3->next = $1;
-			$$ = $3;
+			struct decl* cur_node = $1;
+			while (cur_node->next != NULL) 
+				cur_node = cur_node->next;
+			cur_node->next = $3;
+			$3->next = NULL;
+			$$ = $1;
 		}
 %%
 
@@ -568,15 +640,43 @@ void check_is_struct_type(struct decl* arg_decl) {
 	print_error("incomplete type error");
 }
 
-void add_formals(struct decl* procdecl, struct decl* formals) {
-	
+void add_formals(struct decl* procdecl, struct ste* formals) {
+	if (procdecl == NULL || formals == NULL) 
+		return ;
+
+	// Not yet declared. 
+	if (procdecl->defined == 0) {
+		// printf("%d: return type is : %d\n", read_line(), formals->decl->typeclass);
+		procdecl->returntype = formals->decl;
+		procdecl->formals = formals->prev;
+	} 
+	// Declared, define at here.
+	else {
+		struct ste* cur_node = formals;
+		struct ste* form_cursor = procdecl->formals;
+		if (cur_node->decl->type != procdecl->returntype) {
+			print_error("redeclaration");
+		}
+		cur_node = cur_node->prev;
+
+		while (cur_node != NULL || form_cursor != NULL) {
+			if (cur_node != form_cursor) {
+				print_error("redeclaration");
+				break;
+			}
+			cur_node = cur_node->prev;
+			form_cursor = form_cursor->prev;
+		}
+		
+		return;
+	}
 }
 
 struct decl* addpointer(struct decl* arg_decl) {
 	// printf("checking\n");
 	struct decl* new_node = (struct decl *)malloc(sizeof(struct decl));
 
-	// printf("%d: arg decl's class is %d\n", read_line(), arg_deckl->declclass);
+	// printf("%d: arg decl's class is %d\n", read_line(), arg_decl->declclass);
 
 	new_node->declclass = 1; // CONST
 	new_node->origin = arg_decl;
@@ -657,24 +757,34 @@ struct decl* reference_array(struct decl* ptr_decl, struct decl* const_decl) {
 	return NULL;
 }
 
-void check_compatibility(struct decl* arg1, struct decl* arg2) {
+int check_compatibility(struct decl* arg1, struct decl* arg2, int enable) {
 	// printf("%d: arg1 : %d, arg2 : %d\n", read_line(), arg1->declclass, arg2->declclass);
-	if (arg1->declclass == 0 && arg2->declclass == 0) {
+	// NULL blocking
+	if (arg1 == NULL || arg2 == NULL) {
+		if (enable)
+			print_error("LHS and RHS are not same type");
+
+		return 0;
+	}
+
+	if (arg1->declclass == 0 && (arg2->declclass == 0 || arg2->declclass == 1)) {
 		if (arg1->type == arg2->type) 
-			return;
+			return 1;
 	}
 	if (arg1->type != NULL && arg2->type !=	NULL) {
 		// both pointer
 		if (arg1->type->typeclass == 3 && arg2->type->typeclass == 3 && arg1->type->ptrto == arg2->type->ptrto) 
-			return;
+			return 1;
 		// RHS is array pointer
 		if (arg2->type->typeclass == 2 && arg1->type->ptrto == arg2->type->elementvar->type)
-			return;
+			return 1;
 		if (arg1->type->typeclass == 2 && arg1->type->elementvar->type == arg2->type->ptrto)
-			return;
+			return 1;
 	}
+	if (enable) 
+		print_error("LHS and RHS are not same type");
 
-	print_error("LHS and RHS are not same type");
+	return 0;
 }
 
 struct decl* reference_struct(struct decl* struct_name, struct id* member) {
@@ -706,8 +816,8 @@ void declare(struct id* arg_id, struct decl* arg_decl) {
 	// Checking redeclaration
 	struct decl* tmp_decl = NULL;
 	if ((tmp_decl = lookup_stack(arg_id)) != NULL){
-		// check struct decl in other function
-		if (tmp_decl->typeclass != 4) {
+		// check struct decl and func decl in other function
+		if (tmp_decl->typeclass != 4 && tmp_decl->typeclass != 3) {
 			print_error("redeclaration");
 		}
 		return;
