@@ -152,10 +152,10 @@ struct decl* lookup_func() {
 
     while (cur_node != NULL) {
         if (cur_node->decl->declclass == 2) {
-            ret = cur_node;
+            return cur_node->decl;
         }
         cur_node = cur_node->prev;
     }
     
-    return ret != NULL ? ret->decl : NULL;
+    return NULL;
 }

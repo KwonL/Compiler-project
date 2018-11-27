@@ -131,31 +131,35 @@ func_decl
 		: type_specifier pointers ID '(' ')' {
 			struct decl* procdecl = makeprocdecl();
 			// Declare if there is no redeclaration
-			if (lookup_stack($3) == NULL) 
-				declare_struct($3, procdecl);
+			if (lookup_whole($3) == NULL) 
+				declare($3, procdecl);
 			push_scope(); 
 			declare(returnid, makepointerdecl($2, $1));
 
 			struct ste* formals;
 			formals = pop_scope();
 			add_formals(procdecl, formals);
+
+			$$ = procdecl;
 		}
 		| type_specifier pointers ID '(' VOID ')' {
 			struct decl* procdecl = makeprocdecl();
 			// Declare if there is no redeclaration
-			if (lookup_stack($3) == NULL) 
-				declare_struct($3, procdecl);
+			if (lookup_whole($3) == NULL) 
+				declare($3, procdecl);
 			push_scope(); 
 			declare(returnid, makepointerdecl($2, $1));
 
 			struct ste* formals;
 			formals = pop_scope();
 			add_formals(procdecl, formals);
+
+			$$ = procdecl;
 		}
 		| type_specifier pointers ID '(' {
 			struct decl* procdecl = makeprocdecl();
-			if (lookup_stack($3) == NULL)
-				declare_struct($3, procdecl);
+			if (lookup_whole($3) == NULL)
+				declare($3, procdecl);
 			push_scope();
 			declare(returnid, makepointerdecl($2, $1));
 			$<declPtr>$ = procdecl;
@@ -663,7 +667,7 @@ void add_formals(struct decl* procdecl, struct ste* formals) {
 	if (procdecl == NULL || formals == NULL) 
 		return ;
 
-	printf("%d: add formals called, procdecl is %p\n", read_line(), procdecl);
+	// printf("%d: add formals called, procdecl is %p\n", read_line(), procdecl);
 
 	// Not yet declared. 
 	if (procdecl->defined == 0) {
