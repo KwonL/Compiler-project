@@ -634,7 +634,7 @@ struct decl* findcurrentdecl(struct id* arg_id) {
 
 void check_is_struct_type(struct decl* arg_decl) {
 	// TYPE and STRUCT
-	if (arg_decl->declclass == 3 && arg_decl->typeclass == 4) 
+	if (arg_decl != NULL && arg_decl->declclass == 3 && arg_decl->typeclass == 4) 
 		return ;
 
 	print_error("incomplete type error");
