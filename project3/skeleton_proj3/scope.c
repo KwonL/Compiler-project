@@ -22,6 +22,8 @@ void push_scope() {
 }
 
 void insert(struct id* arg_id, struct decl* arg_decl) {
+    if (arg_id == NULL || arg_decl == NULL) 
+        return;
     struct ste* node = (struct ste *)malloc(sizeof(struct ste));
 
     // initialize new node
@@ -133,6 +135,7 @@ struct decl* lookup_stack(struct id* arg_id) {
 }
 
 struct decl* lookup_whole(struct id* arg_id) {
+    if (arg_id == NULL) return NULL;
     struct ste* cur_node = top->ste;
 
     while (cur_node != NULL) {

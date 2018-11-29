@@ -78,7 +78,7 @@ ext_def
 		}
 		| func_decl {
 			push_scope();
-			struct ste* stelist = $1->formals;
+			struct ste* stelist = $1 != NULL ? $1->formals : NULL;
 			while(stelist != NULL) {
 				declare(stelist->name, stelist->decl);
 				stelist = stelist->prev;
@@ -107,10 +107,6 @@ struct_specifier
 			struct ste* fieldlist = pop_scope();
 			struct ste* cur = fieldlist;
 			while (cur != NULL) {
-				// re push struct id
-				// if (cur->decl->typeclass == 4) {
-				// 	insert(cur->name, cur->decl);
-				// }
 				cur = cur->prev;
 			}
 			declare_struct($2, $$ = makestructdecl(fieldlist));
@@ -271,8 +267,9 @@ or_expr
 
 or_list
 		: or_list LOGICAL_OR and_expr {
-			if ($1->type != inttype || $3->type != inttype) 
-				print_error("not int type");
+			if ($1 != NULL && $3 != NULL) 
+				if ($1->type != inttype || $3->type != inttype) 
+					print_error("not int type");
 
 			$$ = $1;
 		}
@@ -287,8 +284,9 @@ and_expr
 
 and_list
 		: and_list LOGICAL_AND binary {
-			if ($1->type != inttype || $3->type != inttype) 
-				print_error("not int type");
+			if ($1 != NULL && $3 != NULL)
+				if ($1->type != inttype || $3->type != inttype) 
+					print_error("not int type");
 
 			$$ = makeconstdecl(inttype);
 		}
@@ -299,42 +297,56 @@ and_list
 binary
 		: binary RELOP binary {
 			$$ = makeconstdecl(inttype);
-			if ($1->type != inttype && $1->type != chartype || $3->type != inttype && $3->type != chartype) {
-				print_error("not int or char type");
-			} else {
-				if ($1->type != $3->type) 
-					print_error("not comparable");
+			if ($1 != NULL && $3 != NULL) {
+				if ($1->type != inttype && $1->type != chartype || $3->type != inttype && $3->type != chartype) { 
+					print_error("not int or char type");
+					$$ = NULL;
+				} else {
+					if ($1->type != $3->type) {
+						print_error("not comparable");
+						$$ = NULL;
+					}			
+				}
 			}
 		}
 		| binary EQUOP binary {
 			$$ = makeconstdecl(inttype);
-			if ($1->type != inttype && $1->type != chartype && $1->type->typeclass != 3 || $3->type != inttype && $3->type != chartype && $3->type->typeclass != 3) {
-				print_error("not int or char or pointer type");
-			} 
-			if ($1->type->typeclass == 3 && $3->type->typeclass == 3) {
-				if (!check_compatibility($1, $3, 0)) {
-					print_error("not comparable");
+			if ($1 != NULL && $3 != NULL) {
+				if ($1->type != inttype && $1->type != chartype && $1->type->typeclass != 3 || $3->type != inttype && $3->type != chartype && $3->type->typeclass != 3) {
+					print_error("not int or char or pointer type");
+					$$ = NULL;
+				} 
+				if ($1->type->typeclass == 3 && $3->type->typeclass == 3) {
+					if (!check_compatibility($1, $3, 0)) {
+						print_error("not comparable");
+						$$ = NULL;
+					}
 				}
+				else if ($1->type != $3->type) 
+					print_error("not comparable");
+					$$ = NULL;
 			}
-			else if ($1->type != $3->type) 
-				print_error("not comparable");
 		}
 		| binary '+' binary {
-			if ($1->type->typeclass == 0 && $3->type->typeclass == 0) {
-				// int + int 
-				$$ = clonedecl($1);
-			}
-			else {
-				print_error("not int type");
+			if ($1 != NULL && $3 != NULL) {
+				if ($1->type->typeclass == 0 && $3->type->typeclass == 0) {
+					// int + int 
+					$$ = clonedecl($1);
+				}
+				else {
+					print_error("not int type");
+				}
 			}
 		}
 		| binary '-' binary {
-			if ($1->type->typeclass == 0 && $3->type->typeclass == 0) {
-				// int + int 
-				$$ = clonedecl($1);
-			}
-			else {
-				print_error("not int type");
+			if ($1 != NULL && $3 != NULL) {
+				if ($1->type->typeclass == 0 && $3->type->typeclass == 0) {
+					// int + int 
+					$$ = clonedecl($1);
+				}
+				else {
+					print_error("not int type");
+				}
 			}
 		}
 		| unary %prec '=' {
@@ -367,13 +379,11 @@ unary
 		}
 		| '-' unary	%prec '!' {
 			$$ = $2;
-			if ($2->type != inttype) print_error("not int type");
-			$$->value = -$2->value;
+			if ($2 != NULL && $2->type != inttype) print_error("not int type");
 		}
 		| '!' unary {
 			$$ = $2;
-			if ($2->type != inttype) print_error("not int type");
-			$$->value = !$2->value;
+			if ($2 != NULL && $2->type != inttype) print_error("not int type");
 		}
 		| unary INCOP {
 			$$ = $1; 
@@ -381,23 +391,20 @@ unary
 		}
 		| unary DECOP {
 			$$ = $1;
-			$$->value = $1->value--;
 			check_incable($1);
 		}
 		| INCOP unary {
 			$$ = $2;
-			$$->value = ++$2->value;
 			check_incable($2);
 		}
 		| DECOP unary {
 			$$ = $2;
-			$$->value = --$2->value;
 			check_incable($2);
 		}
 		| '&' unary	%prec '!' {
 			$$ = addpointer($2);
 
-			if ($2->declclass != 0) {
+			if ($2 != NULL && $2->declclass != 0) {
 				print_error("not variable");
 			}
 		}
@@ -502,6 +509,8 @@ struct decl* maketypedecl(int type) {
 }
 
 struct decl* makevardecl(struct decl* typedecl) {
+	if (typedecl == NULL) 
+		return NULL;
 	struct decl* new_node = (struct decl *)malloc(sizeof(struct decl));
 
 	new_node->declclass = 0; // VAR
@@ -513,6 +522,8 @@ struct decl* makevardecl(struct decl* typedecl) {
 }
 
 struct decl* makepointerdecl(int isPtr, struct decl* typedecl) {
+	if (typedecl == NULL)
+		return NULL;
 	// Not a pointer. Just return type 
 	if (!isPtr) {
 		return typedecl;
@@ -531,6 +542,8 @@ struct decl* makepointerdecl(int isPtr, struct decl* typedecl) {
 }
 
 struct decl* makearraydecl(struct decl* const_decl, struct decl* var_decl) {
+	if (const_decl == NULL || var_decl == NULL) 
+		return NULL;
 	// printf("makearray\n");
 	struct decl* new_node = (struct decl *)malloc(sizeof(struct decl));
 
@@ -553,7 +566,9 @@ struct decl* makearraydecl(struct decl* const_decl, struct decl* var_decl) {
 	return new_node;
 }
 
-struct decl* makeconstdecl(struct decl* type_decl) {
+struct decl* makeconstdecl(struct decl* type_decl) { 
+	if (type_decl == NULL) 
+		return NULL;
 	struct decl* new_node = (struct decl *)malloc(sizeof(struct decl));
 
 	new_node->declclass = 1; // CONST
@@ -609,6 +624,7 @@ struct decl* makeprocdecl() {
 }
 
 void check_struct_isdefined(struct id* arg_id) {
+	if (arg_id == NULL) return;
 	struct ste* cur_node = top->ste;
 
 	while (cur_node != NULL) { 
@@ -666,6 +682,9 @@ void add_formals(struct decl* procdecl, struct ste* formals) {
 }
 
 struct decl* addpointer(struct decl* arg_decl) {
+	if (arg_decl == NULL) {
+		return NULL;
+	}
 	// printf("checking\n");
 	struct decl* new_node = (struct decl *)malloc(sizeof(struct decl));
 
@@ -782,7 +801,7 @@ int check_compatibility(struct decl* arg1, struct decl* arg2, int enable) {
 }
 
 struct decl* reference_struct(struct decl* struct_name, struct id* member) {
-	if (struct_name == NULL) 
+	if (struct_name == NULL || struct_name->type == NULL) 
 		return NULL;
 	// Not a struct
 	if (struct_name->type != NULL && struct_name->type->typeclass != 4) {
@@ -850,6 +869,7 @@ void check_return_type_compatibility(struct decl* type1, struct decl* type2) {
 }
 
 void declare_struct(struct id* arg_id, struct decl* arg_decl) {
+	if (arg_id == NULL || arg_decl == NULL) return;
 	// Declare struct at bottom of scope
 	struct ste* node = top->ste;
 	struct ste* new_node = (struct ste *)malloc(sizeof(struct ste));
