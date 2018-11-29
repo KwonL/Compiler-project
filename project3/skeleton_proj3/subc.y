@@ -71,17 +71,12 @@ ext_def
 			declare($3, makeconstdecl(makearraydecl($5, makevardecl(makepointerdecl($2, $1)))));
 		}
 		| func_decl ';' {
-			if ($1->defined != 0) {
-				print_error("redeclaration");
-			} else {
-				$1->defined = 1;
-			}
+			// Do nothing
 		}
 		| type_specifier ';' {
 			// do nothing
 		}
 		| func_decl {
-			if ($1->defined == 2) print_error("redeclaration");
 			push_scope();
 			struct ste* stelist = $1->formals;
 			while(stelist != NULL) {
@@ -90,7 +85,6 @@ ext_def
 			}
 		}  compound_stmt {
 			free_ste_list(pop_scope());
-			$1->defined = 2;
 		}
 
 type_specifier
@@ -129,12 +123,9 @@ struct_specifier
 
 func_decl
 		: type_specifier pointers ID '(' ')' {
-			struct decl* procdecl;
-			// Declare if there is no redeclaration
-			if ((procdecl = lookup_whole($3)) == NULL) {
-				procdecl = makeprocdecl();
-				declare($3, procdecl);
-			}
+			struct decl* procdecl = makeprocdecl();
+			declare($3, procdecl);
+
 			push_scope(); 
 			declare(returnid, makepointerdecl($2, $1));
 
@@ -145,12 +136,9 @@ func_decl
 			$$ = procdecl;
 		}
 		| type_specifier pointers ID '(' VOID ')' {
-			struct decl* procdecl;
-			// Declare if there is no redeclaration
-			if ((procdecl = lookup_whole($3)) == NULL) {
-				procdecl = makeprocdecl();
-				declare($3, procdecl);
-			}
+			struct decl* procdecl = makeprocdecl();
+			declare($3, procdecl);
+
 			push_scope(); 
 			declare(returnid, makepointerdecl($2, $1));
 
@@ -161,12 +149,9 @@ func_decl
 			$$ = procdecl;
 		}
 		| type_specifier pointers ID '(' {
-			struct decl* procdecl;
-			// Declare if there is no redeclaration
-			if ((procdecl = lookup_whole($3)) == NULL) {
-				procdecl = makeprocdecl();
-				declare($3, procdecl);
-			}
+			struct decl* procdecl = makeprocdecl();
+			declare($3, procdecl);
+
 			push_scope();
 			declare(returnid, makepointerdecl($2, $1));
 			$<declPtr>$ = procdecl;
@@ -238,7 +223,7 @@ stmt
 		: expr ';'
 		| { push_scope(); }compound_stmt { free_ste_list(pop_scope()); }
 		| RETURN ';' {
-			// Check return typ
+			// Check return type
 			struct decl* func_decl = lookup_func();
 
 			if (func_decl != NULL && func_decl->returntype != voidtype) {
@@ -248,9 +233,7 @@ stmt
 		| RETURN expr ';' {
 			struct decl* func_decl = lookup_func();
 
-			if (func_decl != NULL && func_decl->returntype != $2->type) {
-				print_error("return value is not return type");
-			}
+			check_return_type_compatibility(func_decl->returntype, $2->type);
 		}
 		| ';'
 		| IF '(' expr ')' stmt %prec THEN
@@ -676,33 +659,10 @@ void add_formals(struct decl* procdecl, struct ste* formals) {
 
 	// printf("%d: add formals called, procdecl is %p\n", read_line(), procdecl);
 
-	// Not yet declared. 
-	if (procdecl->defined == 0) {
-		// printf("%d: return type is : %d\n", read_line(), formals->decl->typeclass);
-		procdecl->returntype = formals->decl;
-		procdecl->formals = formals->prev;
-	} 
-	// Declared, define at here.
-	else {
-		struct ste* cur_node = formals;
-		struct ste* form_cursor = procdecl->formals;
-		// printf("%d: first formal is %s, return type is %d\n", read_line(), cur_node->name->name, procdecl->returntype->typeclass);
-		if (cur_node->decl->type != procdecl->returntype) {
-			print_error("redeclaration");
-		}
-		cur_node = cur_node->prev;
-
-		while (cur_node != NULL || form_cursor != NULL) {
-			if (cur_node != form_cursor) {
-				print_error("redeclaration");
-				break;
-			}
-			cur_node = cur_node->prev;
-			form_cursor = form_cursor->prev;
-		}
-		
-		return;
-	}
+	procdecl->returntype = formals->decl;
+	procdecl->formals = formals->prev;
+	
+	return;
 }
 
 struct decl* addpointer(struct decl* arg_decl) {
@@ -801,6 +761,10 @@ int check_compatibility(struct decl* arg1, struct decl* arg2, int enable) {
 		if (arg1->type == arg2->type) 
 			return 1;
 	}
+	if (arg2->declclass == 0 && (arg1->declclass == 0 || arg1->declclass == 1)) {
+		if (arg1->type == arg2->type)
+			return 1;
+	}
 	if (arg1->type != NULL && arg2->type !=	NULL) {
 		// both pointer
 		if (arg1->type->typeclass == 3 && arg2->type->typeclass == 3 && (arg1->type->ptrto == arg2->type->ptrto || arg2->type->ptrto == voidtype)) 
@@ -865,6 +829,24 @@ void declare(struct id* arg_id, struct decl* arg_decl) {
 	if (arg_id == NULL || arg_decl == NULL) return;
 
 	return;
+}
+
+void check_return_type_compatibility(struct decl* type1, struct decl* type2) {
+	if (type1 == NULL || type2 == NULL)
+		return;
+	if (type1 == type2) 
+		return;
+
+	// both pointer
+	if (type1->typeclass == 3 && type2->typeclass == 3 && (type1->ptrto == type2->ptrto || type2->ptrto == voidtype)) 
+		return;
+	// RHS is array pointer
+	if (type2->typeclass == 2 && type1->ptrto == type2->elementvar->type)
+		return;
+	if (type1->typeclass == 2 && type1->elementvar->type == type2->ptrto)
+		return;
+
+	print_error("return value is not return type");
 }
 
 void declare_struct(struct id* arg_id, struct decl* arg_decl) {

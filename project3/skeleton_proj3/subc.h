@@ -92,6 +92,7 @@ struct decl* reference_array(struct decl* ptr_decl, struct decl* const_decl);
 int check_compatibility(struct decl* arg1, struct decl* arg2, int enable);
 struct decl* reference_struct(struct decl* struct_name, struct id* member);
 void add_formals(struct decl* procdecl, struct ste* formals);
+void check_return_type_compatibility(struct decl* type1, struct decl* type2);
 void declare(struct id* arg_id, struct decl* arg_decl);
 void declare_struct(struct id* arg_id, struct decl* arg_decl);
 
