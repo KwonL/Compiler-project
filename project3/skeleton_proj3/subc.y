@@ -129,7 +129,7 @@ func_decl
 			formals = pop_scope();
 			add_formals(procdecl, formals);
 
-			$$ = procdecl;
+			$$ = lookup_whole($3);
 		}
 		| type_specifier pointers ID '(' VOID ')' {
 			struct decl* procdecl = makeprocdecl();
@@ -142,7 +142,7 @@ func_decl
 			formals = pop_scope();
 			add_formals(procdecl, formals);
 
-			$$ = procdecl;
+			$$ = lookup_whole($3);
 		}
 		| type_specifier pointers ID '(' {
 			struct decl* procdecl = makeprocdecl();
@@ -156,7 +156,8 @@ func_decl
 			struct decl* procdecl = $<declPtr>5;
 			formals = pop_scope();
 			add_formals(procdecl, formals);
-			$$ = procdecl;
+
+			$$ = lookup_whole($3);
 		}
 
 pointers
@@ -228,8 +229,9 @@ stmt
 		}
 		| RETURN expr ';' {
 			struct decl* func_decl = lookup_func();
-
-			check_return_type_compatibility(func_decl->returntype, $2->type);
+			
+			if (func_decl != NULL) 
+				check_return_type_compatibility(func_decl->returntype, $2->type);
 		}
 		| ';'
 		| IF '(' expr ')' stmt %prec THEN
@@ -627,6 +629,13 @@ void check_struct_isdefined(struct id* arg_id) {
 	if (arg_id == NULL) return;
 	struct ste* cur_node = top->ste;
 
+	// Just check below int type
+	while (cur_node != NULL) {
+		if (cur_node->decl == inttype) 
+			break;
+		cur_node = cur_node->prev;
+	}
+
 	while (cur_node != NULL) { 
 		if (cur_node->name == arg_id) {
 			print_error("redeclaration");
@@ -826,11 +835,13 @@ struct decl* reference_struct(struct decl* struct_name, struct id* member) {
 }
 
 void declare(struct id* arg_id, struct decl* arg_decl) {	
+	if (arg_id == NULL || arg_decl == NULL) 
+		return;
 	// Checking redeclaration
 	struct decl* tmp_decl = NULL;
 	if ((tmp_decl = lookup_stack(arg_id)) != NULL){
-		// check struct decl and func decl in other function
-		if (tmp_decl->typeclass != 4 && tmp_decl->typeclass != 3) {
+		// check struct decl in other function
+		if (tmp_decl->declclass != 4) {
 			print_error("redeclaration");
 		}
 		return;
@@ -840,12 +851,12 @@ void declare(struct id* arg_id, struct decl* arg_decl) {
 	/*
 	 * This is for debugging
 	 */
-	struct ste* test_node = top->ste; 
-	while (test_node != NULL) {
-		// printf("%d: cur node's name is : %s\n", read_line(), test_node->name->name);
-		test_node = test_node->prev;
-	}
-	if (arg_id == NULL || arg_decl == NULL) return;
+	// struct ste* test_node = top->ste; 
+	// while (test_node != NULL) {
+	// 	// printf("%d: cur node's name is : %s\n", read_line(), test_node->name->name);
+	// 	test_node = test_node->prev;
+	// }
+	// if (arg_id == NULL || arg_decl == NULL) return;
 
 	return;
 }
