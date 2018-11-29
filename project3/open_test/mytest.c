@@ -56,5 +56,7 @@ int main() {
     a = NULL; /* error */
     arr = NULL; /* error */
 
+    &a.i;
+
     return 0;
 }
