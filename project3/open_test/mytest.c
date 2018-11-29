@@ -29,6 +29,7 @@ int main() {
     char *chtr;
     int array[10];
     struct mine aa; /* error */
+    struct str nini;
 
     struct inner_2_str { /* error: redecl */
     };
@@ -37,13 +38,13 @@ int main() {
 
     arr[0] = arr2; /* error */
 
-    a[i] = 3;
+    a[i] = 3; /* error */
     arr[0] = NULL;
 
     *ptr = a && b; /* error */
 
     b = 2; /* error */
-    func();
+    func(); /* error */
 
     chtr == ptr; /* error */
     *b; /* error */
@@ -55,8 +56,8 @@ int main() {
     ptr = NULL;
     a = NULL; /* error */
     arr = NULL; /* error */
-
-    &a.i;
+    
+    chtr = "test string";
 
     return 0;
 }
