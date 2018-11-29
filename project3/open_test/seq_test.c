@@ -23,5 +23,7 @@ int main() {
     y = y++; /* error */
     a < c; /* error */
 
+    *"string";
+
     return 0;
 }
