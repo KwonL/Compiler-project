@@ -149,16 +149,38 @@ struct decl* lookup_whole(struct id* arg_id) {
 }
 
 struct decl* lookup_func() {
-    // empty stack
+    // // empty stack
+    // struct ste* cur_node = top->ste;
+    // struct ste* ret = NULL;
+
+    // while (cur_node != NULL) {
+    //     if (cur_node->decl->declclass == 2) {
+    //         return cur_node->decl;
+    //     }
+    //     cur_node = cur_node->prev;
+    // }
+    
+    // return NULL;
+    return cur_func;
+}
+
+struct decl* lookup_struct(struct id* name) {
+    if (name == NULL)
+        return NULL;
     struct ste* cur_node = top->ste;
-    struct ste* ret = NULL;
 
     while (cur_node != NULL) {
-        if (cur_node->decl->declclass == 2) {
-            return cur_node->decl;
-        }
+        if (cur_node->decl == inttype) 
+            break;
         cur_node = cur_node->prev;
     }
-    
+
+    // search only below int type
+    while (cur_node != NULL) {
+        if (cur_node->name == name) 
+            return cur_node->decl;
+        cur_node = cur_node->prev;
+    }
+
     return NULL;
 }

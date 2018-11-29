@@ -112,7 +112,7 @@ struct_specifier
 			declare_struct($2, $$ = makestructdecl(fieldlist));
 		}
 		| STRUCT ID {
-			struct decl* declptr = lookup_whole($2);
+			struct decl* declptr = lookup_struct($2);
 			check_is_struct_type(declptr);
 			$$ = declptr;
 		}
@@ -120,6 +120,7 @@ struct_specifier
 func_decl
 		: type_specifier pointers ID '(' ')' {
 			struct decl* procdecl = makeprocdecl();
+			cur_func = procdecl;
 			declare($3, procdecl);
 
 			push_scope(); 
@@ -133,6 +134,7 @@ func_decl
 		}
 		| type_specifier pointers ID '(' VOID ')' {
 			struct decl* procdecl = makeprocdecl();
+			cur_func = procdecl;
 			declare($3, procdecl);
 
 			push_scope(); 
@@ -146,6 +148,7 @@ func_decl
 		}
 		| type_specifier pointers ID '(' {
 			struct decl* procdecl = makeprocdecl();
+			cur_func = procdecl;
 			declare($3, procdecl);
 
 			push_scope();
@@ -230,8 +233,13 @@ stmt
 		| RETURN expr ';' {
 			struct decl* func_decl = lookup_func();
 			
-			if (func_decl != NULL) 
-				check_return_type_compatibility(func_decl->returntype, $2->type);
+			if (func_decl != NULL && $2 != NULL) {
+				if ($2->declclass != 0 && $2->declclass != 1) {
+					print_error("not const or variable");
+				} else {
+					check_return_type_compatibility(func_decl->returntype, $2->type);
+				}
+			}
 		}
 		| ';'
 		| IF '(' expr ')' stmt %prec THEN
@@ -251,7 +259,7 @@ const_expr
 expr
 		: unary '=' expr {
 			if ($1 == NULL || $1->declclass != 0) print_error("LHS is not a variable");
-			if ($3 == NULL || $3->declclass != 0 && $3->declclass != 1 || $3->type == voidtype) {
+			if ($3 == NULL || ($3->declclass != 0 && $3->declclass != 1)) {
 				print_error("RHS is not a const or variable");
 			}
 			else 
@@ -324,9 +332,10 @@ binary
 						$$ = NULL;
 					}
 				}
-				else if ($1->type != $3->type) 
+				else if ($1->type != $3->type) {
 					print_error("not comparable");
 					$$ = NULL;
+				}
 			}
 		}
 		| binary '+' binary {
@@ -334,6 +343,8 @@ binary
 				if ($1->type->typeclass == 0 && $3->type->typeclass == 0) {
 					// int + int 
 					$$ = clonedecl($1);
+					if ($$ != NULL)
+						$$->declclass = 1; // CONST
 				}
 				else {
 					print_error("not int type");
@@ -345,6 +356,8 @@ binary
 				if ($1->type->typeclass == 0 && $3->type->typeclass == 0) {
 					// int + int 
 					$$ = clonedecl($1);
+					if ($$ != NULL) 
+						$$->declclass = 1;
 				}
 				else {
 					print_error("not int type");
@@ -381,10 +394,14 @@ unary
 		}
 		| '-' unary	%prec '!' {
 			$$ = $2;
+			if ($$ != NULL)
+				$$->declclass = 1;
 			if ($2 != NULL && $2->type != inttype) print_error("not int type");
 		}
 		| '!' unary {
 			$$ = $2;
+			if ($$ != NULL) 
+				$$->declclass = 1;
 			if ($2 != NULL && $2->type != inttype) print_error("not int type");
 		}
 		| unary INCOP {
@@ -759,9 +776,14 @@ struct decl* reference_ptr(struct decl * arg_decl) {
 }
 
 struct decl* reference_array(struct decl* ptr_decl, struct decl* const_decl) {
-	if (ptr_decl == NULL || ptr_decl->type == NULL) return NULL;
+	if (ptr_decl == NULL || ptr_decl->type == NULL || const_decl == NULL) 
+		return NULL;
 
 	// printf("%d: ptr decl class = %d\n", read_line(), ptr_decl->declclass);
+	if (const_decl->type != inttype) {
+		print_error("not int type");
+		return NULL;
+	}
 
 	if (ptr_decl->type->typeclass == 2) {
 		// printf("line : %d, type class is : %d\n", read_line(), ptr_decl->type->typeclass);
@@ -810,9 +832,11 @@ int check_compatibility(struct decl* arg1, struct decl* arg2, int enable) {
 }
 
 struct decl* reference_struct(struct decl* struct_name, struct id* member) {
-	if (struct_name == NULL || struct_name->type == NULL) 
+	if (struct_name == NULL || struct_name->type == NULL) {
+		print_error("not variable");
+
 		return NULL;
-	// Not a struct
+	}
 	if (struct_name->type != NULL && struct_name->type->typeclass != 4) {
 		print_error("variable is not struct");
 
