@@ -63,6 +63,7 @@ void free_ste_list(struct ste* list);
 struct decl* lookup_stack(struct id* arg_id);
 struct decl* lookup_whole(struct id* arg_id);
 struct decl* lookup_func();
+struct decl* lookup_struct(struct id* name);
 
 /* For hash table */
 unsigned hash(char *name);
@@ -101,6 +102,8 @@ struct decl* inttype;
 struct decl* chartype;
 struct decl* voidtype;
 struct id* returnid;
+// for return type checking
+struct decl* cur_func;
 
 /* file name , readline */
 int read_line();
