@@ -11,7 +11,7 @@ char func2(void) {
 void func3(int *a, int b) {
 	int *c;
 
-	c = a + b;
+	c = a + b; /* error */
 }
 
 int main(void) {

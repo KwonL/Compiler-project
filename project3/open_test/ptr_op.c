@@ -15,14 +15,14 @@ int main(void) {
 	b = &b;		/* error */
 	b = &*(a+5);/* error */
 	b = &(b++);	/* error */
-	b = &*(b++);
+	b = &*(b++); /* error */
 
 	d = b;		/* error */
 	d = c;
 
 	c[1] = a[2]; /* error */
 	d = &(++d); /* error */
-	d = &*(++d);
+	d = &*(++d) /* error */;
 
 	if (b < d) { /* error */
 		return -1;
