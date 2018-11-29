@@ -342,7 +342,7 @@ binary
 				$$ = clonedecl($1);
 			}
 			else {
-				print_error("not computable");
+				print_error("not int type");
 			}
 		}
 		| binary '-' binary {
@@ -351,7 +351,7 @@ binary
 				$$ = clonedecl($1);
 			}
 			else {
-				print_error("not computable");
+				print_error("not int type");
 			}
 		}
 		| unary %prec '=' {
@@ -414,7 +414,7 @@ unary
 		| '&' unary	%prec '!' {
 			$$ = addpointer($2);
 
-			if ($2->type != inttype && $2->type != chartype && ($2->type != NULL && $2->type->typeclass != 4)) {
+			if ($2->declclass != 0) {
 				print_error("not variable");
 			}
 		}
@@ -688,7 +688,7 @@ void add_formals(struct decl* procdecl, struct ste* formals) {
 		struct ste* form_cursor = procdecl->formals;
 		// printf("%d: first formal is %s, return type is %d\n", read_line(), cur_node->name->name, procdecl->returntype->typeclass);
 		if (cur_node->decl->type != procdecl->returntype) {
-			print_error("return types are not same");
+			print_error("redeclaration");
 		}
 		cur_node = cur_node->prev;
 
