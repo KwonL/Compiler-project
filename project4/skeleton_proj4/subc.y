@@ -52,6 +52,7 @@ int    yyerror (char* s);
 %token              FOR
 %token              BREAK
 %token              CONTINUE
+%token				WRITE_INT WRITE_CHAR WRITE_STRING READ_INT READ_CHAR
 
 %%
 program
@@ -83,6 +84,10 @@ ext_def
 				declare(stelist->name, stelist->decl);
 				stelist = stelist->prev;
 			}
+
+			// struct id* func_id = lookup_id($1);
+			// if (func_id != NULL) 
+			// 	fprintf(output_file, "%s :\n ", func_id->name);
 		}  compound_stmt {
 			free_ste_list(pop_scope());
 		}
@@ -392,6 +397,9 @@ unary
 			
 			if ($$ == NULL) print_error("not declared");
 		}
+		| WRITE_INT {
+
+		}
 		| '-' unary	%prec '!' {
 			$$ = $2;
 			if ($$ != NULL)
@@ -502,7 +510,7 @@ void print_error(const char *s) {
 		err_count = 0;
 	}
 	if (!err_count) {
-		printf("%s:%d:error:%s\n", get_filename(), read_line(), s);
+		// printf("%s:%d:error:%s\n", get_filename(), read_line(), s);
 		err_count ++;
 		return;
 	}

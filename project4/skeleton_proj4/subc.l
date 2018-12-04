@@ -99,8 +99,8 @@ void init_type()
    
 int main(int argc, char* argv[])
 {
-   static char *keyword[] = { "int","char", "void", "struct", "return", "if", "else", "while", "for", "break", "continue", "NULL", NULL };
-   static int tokentype[] = { TYPE, TYPE, VOID, STRUCT, RETURN, IF, ELSE, WHILE, FOR, BREAK, CONTINUE, NULL_TOKEN, 0 };
+   static char *keyword[] = { "int","char", "void", "struct", "return", "if", "else", "while", "for", "break", "continue", "NULL", "write_int", "write_char", "write_string", "read_int", "read_char", NULL };
+   static int tokentype[] = { TYPE, TYPE, VOID, STRUCT, RETURN, IF, ELSE, WHILE, FOR, BREAK, CONTINUE, NULL_TOKEN, WRITE_INT, WRITE_CHAR, WRITE_STRING, READ_INT, READ_CHAR, 0 };
    int i;
    for(i = 0; keyword[i] != NULL; i++)
       enter(tokentype[i], keyword[i], strlen(keyword[i]));
@@ -110,6 +110,10 @@ int main(int argc, char* argv[])
 	   strcpy(filename, argv[1]);
    }
    else yyin = stdin;
+   if (argc >= 3) {
+	   output_file = fopen(argv[2], "rw");
+   }
+   else output_file = stdout;
    if(!yyin) {
       printf("Can't open input stream!\n");
       exit(1);

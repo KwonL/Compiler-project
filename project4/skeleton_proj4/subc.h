@@ -64,6 +64,7 @@ struct decl* lookup_stack(struct id* arg_id);
 struct decl* lookup_whole(struct id* arg_id);
 struct decl* lookup_func();
 struct decl* lookup_struct(struct id* name);
+struct id* lookup_id(struct decl* arg_decl);
 
 /* For hash table */
 unsigned hash(char *name);
@@ -109,6 +110,7 @@ struct decl* cur_func;
 int read_line();
 char* get_filename();
 void print_error(const char*);
+FILE* output_file;
 
 #endif
 
