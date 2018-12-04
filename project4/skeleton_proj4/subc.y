@@ -78,18 +78,24 @@ ext_def
 			// do nothing
 		}
 		| func_decl {
-			push_scope();
+			push_scope($1->size + 1);
 			struct ste* stelist = $1 != NULL ? $1->formals : NULL;
 			while(stelist != NULL) {
 				declare(stelist->name, stelist->decl);
 				stelist = stelist->prev;
 			}
 
-			// struct id* func_id = lookup_id($1);
-			// if (func_id != NULL) 
-			// 	fprintf(output_file, "%s :\n ", func_id->name);
+			struct id* func_id = lookup_id($1);
+			if (func_id != NULL) 
+				fprintf(output_file, "%s :\n ", func_id->name);
 		}  compound_stmt {
 			free_ste_list(pop_scope());
+			fprintf(output_file,"%s_final :\n", lookup_id($1)->name);
+			fprintf(output_file, "\tpush_reg fp\n");
+			fprintf(output_file, "\tpop_reg sp\n");
+			fprintf(output_file, "\tpop_reg fp\n");
+			fprintf(output_file, "\tpop_reg pc\n");
+			fprintf(output_file,"%s_end :\n", lookup_id($1)->name);
 		}
 
 type_specifier
@@ -107,7 +113,7 @@ struct_specifier
 		: STRUCT ID {
 			// Check if there are already declared struct
 			check_struct_isdefined($2);
-		} '{' { push_scope(); } def_list '}' {
+		} '{' { push_scope(0); } def_list '}' {
 
 			struct ste* fieldlist = pop_scope();
 			struct ste* cur = fieldlist;
@@ -128,7 +134,7 @@ func_decl
 			cur_func = procdecl;
 			declare($3, procdecl);
 
-			push_scope(); 
+			push_scope(1); 
 			declare(returnid, makepointerdecl($2, $1));
 
 			struct ste* formals;
@@ -142,7 +148,7 @@ func_decl
 			cur_func = procdecl;
 			declare($3, procdecl);
 
-			push_scope(); 
+			push_scope(1); 
 			declare(returnid, makepointerdecl($2, $1));
 
 			struct ste* formals;
@@ -156,7 +162,7 @@ func_decl
 			cur_func = procdecl;
 			declare($3, procdecl);
 
-			push_scope();
+			push_scope(1);
 			declare(returnid, makepointerdecl($2, $1));
 			$<declPtr>$ = procdecl;
 		} param_list ')' {
@@ -212,9 +218,9 @@ def
 
 compound_stmt
 		: '{' {
-			// push_scope();
+
 		} local_defs stmt_list '}' {
-			// pop_scope();
+			
 		}
 
 local_defs  /* local definitions, of which scope is only inside of compound statement */
@@ -225,8 +231,10 @@ stmt_list
 		| /* empty */
 
 stmt
-		: expr ';'
-		| { push_scope(); }compound_stmt { free_ste_list(pop_scope()); }
+		: expr ';' {
+			fprintf(output_file, "\tshift_sp -%d\n", $1->size);
+		}
+		| { push_scope(top->counter); }compound_stmt { free_ste_list(pop_scope()); }
 		| RETURN ';' {
 			// Check return type
 			struct decl* func_decl = lookup_func();
@@ -253,6 +261,9 @@ stmt
 		| FOR '(' expr_e ';' expr_e ';' expr_e ')' stmt
 		| BREAK ';'
 		| CONTINUE ';'
+		| WRITE_INT {
+
+		}
 
 expr_e
 		: expr
@@ -262,14 +273,21 @@ const_expr
 		: expr
 
 expr
-		: unary '=' expr {
+		: unary {
+			fprintf(output_file, "\tpush_reg sp\n");
+			fprintf(output_file, "\tfetch\n");
+
+		} '=' expr {
 			if ($1 == NULL || $1->declclass != 0) print_error("LHS is not a variable");
-			if ($3 == NULL || ($3->declclass != 0 && $3->declclass != 1)) {
+			if ($4 == NULL || ($4->declclass != 0 && $4->declclass != 1)) {
 				print_error("RHS is not a const or variable");
 			}
 			else 
-				check_compatibility($1, $3, 1);
+				check_compatibility($1, $4, 1);
 			$$ = clonedecl($1);
+
+			fprintf(output_file, "\tassign\n");
+			fetch_val($1);
 		}
 		| or_expr {
 			$$ = $1;
@@ -355,6 +373,8 @@ binary
 					print_error("not int type");
 				}
 			}
+
+			fprintf(output_file, "\tadd\n");
 		}
 		| binary '-' binary {
 			if ($1 != NULL && $3 != NULL) {
@@ -368,9 +388,13 @@ binary
 					print_error("not int type");
 				}
 			}
+
+			fprintf(output_file, "\tsub\n");
 		}
 		| unary %prec '=' {
 			$$ = $1;
+
+			fetch_val($1);
 		}
 
 unary
@@ -382,12 +406,20 @@ unary
 		}
 		| INTEGER_CONST {
 			$$ = makeintconstdecl($1);
+
+			fprintf(output_file, "\tpush_const %d\n", $1);
 		}
 		| CHAR_CONST {
 			$$ = makecharconstdecl($1);
+
+			fprintf(output_file, "\tpush_const %d\n", $1[0]);
 		}
 		| STRING {
 			$$ = addpointer(makecharconstdecl($1)); 
+
+			fprintf(output_file, "Str%d. string %s\n", string_counter, $1);
+			fprintf(output_file, "\tpush_const Str%d", string_counter);
+			string_counter++;
 		}
 		| NULL_TOKEN {
 			$$ = makeconstdecl(makepointerdecl(1, voidtype));
@@ -396,9 +428,15 @@ unary
 			$$ = clonedecl(lookup_whole($1));
 			
 			if ($$ == NULL) print_error("not declared");
-		}
-		| WRITE_INT {
 
+			if ($$->isglobal) {
+				fprintf(output_file, "\tpush_const Lglob+%d\n", $$->offset);
+			} else {
+				fprintf(output_file, "\tpush_reg fp\n");
+				fprintf(output_file, "\tpush_const %d\n", $$->offset);
+				// Address of variable. We need to fetch actual value in operation.
+				fprintf(output_file, "\tadd\n");
+			}
 		}
 		| '-' unary	%prec '!' {
 			$$ = $2;
@@ -437,6 +475,8 @@ unary
 		}
 		| '*' unary	%prec '!' {
 			$$ = reference_ptr($2);
+
+			fetch_val($2);
 		}
 		| unary '[' expr ']' {
 			$$ = reference_array($1, $3);
@@ -711,6 +751,14 @@ void add_formals(struct decl* procdecl, struct ste* formals) {
 
 	procdecl->returntype = formals->decl;
 	procdecl->formals = formals->prev;
+
+	struct ste* cur_node = formals;
+	procdecl->size = 0;
+	while (cur_node != NULL) {
+		procdecl->size += cur_node->decl->size;
+
+		cur_node = cur_node->prev;
+	}
 	
 	return;
 }
@@ -726,7 +774,6 @@ struct decl* addpointer(struct decl* arg_decl) {
 
 	new_node->declclass = 1; // CONST
 	new_node->origin = arg_decl;
-	new_node->ptrcoef = arg_decl->ptrcoef - 1;
 
 	struct decl* new_type = (struct decl *)malloc(sizeof(struct decl));
 	new_type->declclass = 4; //TYPE
@@ -880,6 +927,12 @@ void declare(struct id* arg_id, struct decl* arg_decl) {
 	}
 
 	insert(arg_id, arg_decl);
+
+	arg_decl->isglobal = (top->prev == NULL) ? 1 : 0;
+	if (arg_decl->declclass == 0 || (arg_decl->declclass == 1 && arg_decl->type->typeclass == 2)) {
+		arg_decl->offset = top->counter;
+		top->counter += arg_decl->size;
+	}
 	/*
 	 * This is for debugging
 	 */
@@ -925,4 +978,20 @@ void declare_struct(struct id* arg_id, struct decl* arg_decl) {
 	new_node->prev = NULL;
 
 	node->prev = new_node;
+}
+
+void fetch_val(struct decl* arg_decl) {
+	// printf("fetch val called. declclass is %d, type is %d\n", arg_decl->declclass, arg_decl->type->typeclass);
+	if (arg_decl->declclass == 1) {
+		// Const 
+	}
+	// else if (arg_decl->declclass == 0 && arg_decl->type->typeclass == 3) {
+	// 	// Pointer
+	// 	fprintf(output_file, "\tfetch\n");
+	// 	fprintf(output_file, "\tfetch\n");
+	// }
+	else if (arg_decl->declclass == 0) {
+		// Variable 
+		fprintf(output_file, "\tfetch\n");
+	}
 }

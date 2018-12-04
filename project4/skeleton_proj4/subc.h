@@ -37,7 +37,6 @@ struct decl {
     int num_index;	/* TYPE (array): number of elements		*/
     struct ste *fieldlist;	/* TYPE (struct): ptr to field list		*/
     struct decl *ptrto;		/* TYPE (pointer): type of the pointer		*/
-    int ptrcoef;	/* ALL: for check temp decls                    */
     int offset;		/* ALL: local offset                            */
     int isglobal;	/* ALL: isglobal                                */
     int size;		/* ALL: size in bytes				*/
@@ -51,12 +50,12 @@ struct stack_node {
     struct ste* ste;
     struct stack_node* next;
     struct stack_node* prev;
-
+    int counter;
 };
 struct stack_node* top; 
 struct stack_node* bottom;
 
-void push_scope();
+void push_scope(int counter);
 void insert(struct id* arg_id, struct decl* arg_decl);
 struct ste* pop_scope();
 void free_ste_list(struct ste* list);
@@ -111,6 +110,13 @@ int read_line();
 char* get_filename();
 void print_error(const char*);
 FILE* output_file;
+
+/* counter */
+int string_counter;
+
+/* Code generation */
+void printf_code(const char* s);
+void fetch_val(struct decl* arg_decl);
 
 #endif
 

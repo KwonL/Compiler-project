@@ -95,7 +95,15 @@ void init_type()
 	returnid = enter(ID, "*return", 7);
 }
 
-
+void entry_code() {
+	fprintf(output_file, "\tpush_const EXIT\n");
+	fprintf(output_file, "\tpush_reg fp\n");
+	fprintf(output_file, "\tpush_reg sp\n");
+	fprintf(output_file, "\tpop_reg fp\n");
+	fprintf(output_file, "\tjump main\n");
+	fprintf(output_file, "EXIT :\n");
+	fprintf(output_file, "\texit\n");
+}
    
 int main(int argc, char* argv[])
 {
@@ -120,10 +128,13 @@ int main(int argc, char* argv[])
    }
 
    // Initialize
-   push_scope();
+   entry_code();
+   push_scope(0);
    init_type();
 	
    yyparse();
+
+   fprintf(output_file, "Lglob.\tdata %d\n", top->counter);
    fclose(yyin);
    return 0;
 }

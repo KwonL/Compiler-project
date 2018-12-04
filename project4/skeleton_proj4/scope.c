@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include "subc.h"
 
-void push_scope() {
+void push_scope(int counter) {
     // printf("%d: push scope\n", read_line());
     struct stack_node* cur_node = (struct stack_node *)malloc(sizeof(struct stack_node));
 
@@ -17,6 +17,7 @@ void push_scope() {
     }
 
     top = cur_node;
+    top->counter = counter;
 
     return;
 }
