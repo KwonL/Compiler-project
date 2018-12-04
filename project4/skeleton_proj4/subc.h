@@ -43,6 +43,7 @@ struct decl {
     struct decl *origin;        /* ALL: origin for clone decl                   */
     struct ste **scope;	/* VAR: scope when VAR declared			*/
     struct decl *next;		/* For list_of_variables declarations		*/
+    int fetched;     /* Don't need to fetch */
 };                /* Or parameter check of function call		*/
 
 /* For scope stack */

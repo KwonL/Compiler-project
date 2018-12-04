@@ -86,8 +86,7 @@ ext_def
 			}
 
 			struct id* func_id = lookup_id($1);
-			if (func_id != NULL) 
-				fprintf(output_file, "%s :\n ", func_id->name);
+			fprintf(output_file, "%s :\n", func_id->name);
 		}  compound_stmt {
 			free_ste_list(pop_scope());
 			fprintf(output_file,"%s_final :\n", lookup_id($1)->name);
@@ -217,10 +216,23 @@ def
 		}
 
 compound_stmt
-		: '{' {
-
-		} local_defs stmt_list '}' {
-			
+		: '{'  local_defs {
+			// stmt for function
+			if (top->prev->ste->decl == lookup_func()) {
+				if (top->counter - 1 > 0) 
+					fprintf(output_file, "\tshift_sp %d\n", top->counter - 1); // sub for return 
+				fprintf(output_file, "%s_start :\n", lookup_id(lookup_func())->name);
+			}
+			// stmt for others
+			else {
+				if (top->counter > 0) 
+					fprintf(output_file, "\tshift_sp %d\n", top->counter);
+			}
+		} stmt_list '}' {
+			if (top->prev->ste->decl != lookup_func()) {
+				if (top->counter > 0) 
+					fprintf(output_file, "\tshift_sp -%d\n", top->counter);
+			}
 		}
 
 local_defs  /* local definitions, of which scope is only inside of compound statement */
@@ -261,8 +273,14 @@ stmt
 		| FOR '(' expr_e ';' expr_e ';' expr_e ')' stmt
 		| BREAK ';'
 		| CONTINUE ';'
-		| WRITE_INT {
-
+		| WRITE_INT '(' expr ')' ';' {
+			fprintf(output_file, "\twrite_int\n");
+		}
+		| WRITE_CHAR '(' expr ')' ';' {
+			fprintf(output_file, "\twrite_char\n");
+		}
+		| WRITE_STRING '(' expr ')' ';' {
+			fprintf(output_file, "\twrite_string\n");
 		}
 
 expr_e
@@ -394,7 +412,8 @@ binary
 		| unary %prec '=' {
 			$$ = $1;
 
-			fetch_val($1);
+			if (!$1->fetched)
+				fetch_val($1);
 		}
 
 unary
@@ -418,7 +437,7 @@ unary
 			$$ = addpointer(makecharconstdecl($1)); 
 
 			fprintf(output_file, "Str%d. string %s\n", string_counter, $1);
-			fprintf(output_file, "\tpush_const Str%d", string_counter);
+			fprintf(output_file, "\tpush_const Str%d\n", string_counter);
 			string_counter++;
 		}
 		| NULL_TOKEN {
@@ -453,6 +472,24 @@ unary
 		| unary INCOP {
 			$$ = $1; 
 			check_incable($1);
+
+			int size = 1;
+			if ($1->type->typeclass == 3) 
+				size = $1->type->ptrto->size;
+
+			fprintf(output_file,"\tpush_reg sp\n");
+			fprintf(output_file,"\tfetch\n");
+			fprintf(output_file,"\tpush_reg sp\n");
+			fprintf(output_file,"\tfetch\n");
+			fprintf(output_file,"\tfetch\n");
+			fprintf(output_file,"\tpush_const %d\n",size);
+			fprintf(output_file,"\tadd\n");
+			fprintf(output_file,"\tassign\n");
+			fetch_val($1);
+			fprintf(output_file,"\tpush_const %d\n",size);
+			fprintf(output_file,"\tsub\n");
+
+			$$->fetched = 1;
 		}
 		| unary DECOP {
 			$$ = $1;
@@ -461,6 +498,19 @@ unary
 		| INCOP unary {
 			$$ = $2;
 			check_incable($2);
+
+			int size = 1;
+			if ($2->type->typeclass == 3) 
+				size = $2->type->ptrto->size;
+
+			fprintf(output_file,"\tpush_reg sp\n");
+			fprintf(output_file,"\tfetch\n");
+			fprintf(output_file,"\tpush_reg sp\n");
+			fprintf(output_file,"\tfetch\n");
+			fprintf(output_file,"\tfetch\n");
+			fprintf(output_file,"\tpush_const %d\n",size);
+			fprintf(output_file,"\tadd\n");
+			fprintf(output_file,"\tassign\n");
 		}
 		| DECOP unary {
 			$$ = $2;
@@ -477,6 +527,7 @@ unary
 			$$ = reference_ptr($2);
 
 			fetch_val($2);
+			$$->fetched = 1;
 		}
 		| unary '[' expr ']' {
 			$$ = reference_array($1, $3);
