@@ -18,6 +18,7 @@ void push_scope(int counter) {
 
     top = cur_node;
     top->counter = counter;
+    top->init_counter = counter;
 
     return;
 }

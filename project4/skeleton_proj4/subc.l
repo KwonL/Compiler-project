@@ -45,8 +45,18 @@ return_single	","|"!"|"-"|"+"|"*"|"&"|"|"|"="|";"|"("|")"|"{"|"}"|"["|"]"|"/"|"%
 {return_single}		{ return yytext[0]; }
 "||"	{ return LOGICAL_OR; }
 "&&"	{ return LOGICAL_AND; }
-"<"|"<="|">"|">="	{return RELOP; }
-"=="|"!="	{ return EQUOP; }
+"<"|"<="|">"|">="	{
+	yylval.stringVal = (char *)malloc(3);
+	strncpy(yylval.stringVal, yytext, 2);
+	yylval.stringVal[2] = '\0';
+	return RELOP; 
+}
+"=="|"!="	{ 
+	yylval.stringVal = (char *)malloc(3);
+	strncpy(yylval.stringVal, yytext, 2);
+	yylval.stringVal[2] = '\0';
+	return EQUOP; 
+}
 "++"	{ return INCOP; }
 "--"	{return DECOP; }
 \"({special-char}|[^\\\"\n])*\"	{

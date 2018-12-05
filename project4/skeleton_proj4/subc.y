@@ -37,9 +37,9 @@ int    yyerror (char* s);
 
 /* Token and Types */
 %token 				STRUCT
-%token<stringVal>	CHAR_CONST STRING
+%token<stringVal>	CHAR_CONST STRING RELOP EQUOP
 %token<intVal>		INTEGER_CONST
-%type<intVal> pointers
+%type<intVal> pointers if_stmt
 %token              RETURN
 %token				NULL_TOKEN
 %type<declPtr>		type_specifier struct_specifier unary binary expr expr_e or_expr or_list and_expr and_list const_expr args func_decl
@@ -225,13 +225,13 @@ compound_stmt
 			}
 			// stmt for others
 			else {
-				if (top->counter > 0) 
-					fprintf(output_file, "\tshift_sp %d\n", top->counter);
+				if (top->counter - top->init_counter > 0) 
+					fprintf(output_file, "\tshift_sp %d\n", top->counter - top->init_counter);
 			}
 		} stmt_list '}' {
 			if (top->prev->ste->decl != lookup_func()) {
-				if (top->counter > 0) 
-					fprintf(output_file, "\tshift_sp -%d\n", top->counter);
+				if (top->counter - top->init_counter > 0) 
+					fprintf(output_file, "\tshift_sp -%d\n", top->counter - top->init_counter);
 			}
 		}
 
@@ -278,8 +278,17 @@ stmt
 			fprintf(output_file, "\tjump %s_final\n", lookup_id(lookup_func())->name);
 		}
 		| ';'
-		| IF '(' expr ')' stmt %prec THEN
-		| IF '(' expr ')' stmt ELSE stmt
+		| if_stmt stmt %prec THEN {
+			fprintf(output_file, "label_%d :\n", $1);
+		}
+		| if_stmt stmt ELSE {
+			$<intVal>$ = label_counter;
+			label_counter++;
+			fprintf(output_file,"\tjump label_%d\n",$<intVal>$);
+			fprintf(output_file,"label_%d :\n",$1);
+		} stmt {
+			fprintf(output_file, "label_%d :\n", $<intVal>4);
+		}
 		| WHILE '(' expr ')' stmt
 		| FOR '(' expr_e ';' expr_e ';' expr_e ')' stmt
 		| BREAK ';'
@@ -296,6 +305,16 @@ stmt
 			fetch_val($3);
 			fprintf(output_file, "\twrite_string\n");
 		}
+
+if_stmt 
+		: IF {
+			fprintf(output_file, "label_%d :\n", label_counter);
+			label_counter++;
+		} '(' expr ')' {
+			fprintf(output_file, "\tbranch_false label_%d\n", label_counter);
+			$<intVal>$ = label_counter;
+			label_counter++;
+		}		
 
 expr_e
 		: expr
@@ -373,6 +392,19 @@ binary
 					}			
 				}
 			}
+
+			if (!strcmp($2, "<")) {
+				fprintf(output_file, "\tless\n");
+			}
+			else if (!strcmp($2, "<=")) {
+				fprintf(output_file, "\tless_equal\n");
+			}
+			else if (!strcmp($2, ">")) {
+				fprintf(output_file, "\tgreater\n");
+			}
+			else if (!strcmp($2, ">=")) {
+				fprintf(output_file, "\tgreater_equal\n");
+			}
 		}
 		| binary EQUOP binary {
 			$$ = makeconstdecl(inttype);
@@ -391,6 +423,13 @@ binary
 					print_error("not comparable");
 					$$ = NULL;
 				}
+			}
+
+			if (!strcmp($2, "==")) {
+				fprintf(output_file, "\tequal\n");
+			}
+			else if (!strcmp($2, "!=")) {
+				fprintf(output_file, "\tnot_equal\n");
 			}
 		}
 		| binary '+' binary {

@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 #include <strings.h>
+#include <string.h>
 
 /* structure for ID */
 typedef struct id {
@@ -52,6 +53,7 @@ struct stack_node {
     struct stack_node* next;
     struct stack_node* prev;
     int counter;
+    int init_counter;
 };
 struct stack_node* top; 
 struct stack_node* bottom;
