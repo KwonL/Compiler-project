@@ -114,6 +114,7 @@ FILE* output_file;
 
 /* counter */
 int string_counter;
+int label_counter;
 
 /* Code generation */
 void printf_code(const char* s);

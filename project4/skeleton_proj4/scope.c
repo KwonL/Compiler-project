@@ -187,12 +187,14 @@ struct decl* lookup_struct(struct id* name) {
 }
 
 struct id* lookup_id(struct decl* arg_decl) {
+    // printf("Called lookup_id, arg is : %p\n", arg_decl);
     struct ste* cur_node = top->ste;
 
     while (cur_node != NULL) {
-        if (cur_node->decl == arg_decl)
+        if (cur_node->decl == arg_decl->origin)
             return cur_node->name;
-
+        
+        // printf("%s\n", cur_node->name->name);
         cur_node = cur_node->prev;
     }
 
