@@ -113,6 +113,8 @@ int read_line();
 char* get_filename();
 void print_error(const char*);
 FILE* output_file;
+FILE* output_origin;
+FILE* null_dev;
 
 /* counter */
 int string_counter;

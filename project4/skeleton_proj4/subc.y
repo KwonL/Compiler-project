@@ -321,7 +321,12 @@ expr_e
 		| /* empty */
 
 const_expr
-		: expr
+		: {
+			output_file = null_dev;
+		} expr {
+			$$ = $2;
+			output_file = output_origin;
+		}
 
 expr
 		: unary {
@@ -581,14 +586,33 @@ unary
 			// Pointer do not use fetch_val functions.
 			fprintf(output_file, "\tfetch\n");
 		}
-		| unary '[' expr ']' {
-			$$ = reference_array($1, $3);
+		| unary '[' {
+			// fprintf(output_file, "\tfetch\n");
+		} expr ']' {
+			$$ = reference_array($1, $4);
+
+			fprintf(output_file, "\tpush_const %d\n", $$->size);
+			fprintf(output_file, "\tmul\n");
+			fprintf(output_file, "\tadd\n");
 		}
 		| unary '.' ID {
-			$$ = reference_struct($1, $3);
+			// fetch_val($1);	// fetch struct obj
+			$$ = clonedecl(reference_struct($1, $3));
+			// fetch_val($$);
+			if ($$->offset > 0) {
+				fprintf(output_file,"\tpush_const %d\n", $$->offset);
+				fprintf(output_file,"\tadd\n");
+			}
 		}
 		| unary STRUCTOP ID {
-			$$ = reference_struct(reference_ptr($1), $3);
+			fprintf(output_file, "\tfetch\n");	// First fetch pointer 
+			// fetch_val($1);	// Then fetch struct obj
+			$$ = clonedecl(reference_struct(reference_ptr($1), $3));
+			// fetch_val($$);
+			if ($$->offset > 0) {
+				fprintf(output_file,"\tpush_const %d\n", $$->offset);
+				fprintf(output_file,"\tadd\n");
+			}
 		}
 		| unary '(' {
 			fprintf(output_file,"\tshift_sp %d\n", $1->returntype->size);	// ret val
@@ -643,6 +667,15 @@ unary
 				$$ = makeconstdecl($1->returntype);
 			else 
 				$$ = NULL;
+
+			fprintf(output_file,"\tshift_sp %d\n", $1->returntype->size);	// ret val
+			fprintf(output_file,"\tpush_const label_%d\n", label_counter);	// ret addr 
+			fprintf(output_file,"\tpush_reg fp\n"); // old fp
+			fprintf(output_file,"\tpush_reg sp\n");
+			fprintf(output_file,"\tpop_reg fp\n");
+			fprintf(output_file,"\tjump %s\n", lookup_id($1)->name);	// Jump to function
+			fprintf(output_file,"label_%d :\n", label_counter);	// ret addr 
+			label_counter++;
 		}
 
 args    /* actual parameters(function arguments) transferred to function */
@@ -697,7 +730,7 @@ struct decl* maketypedecl(int type) {
 			break;
 		case VOID :
 			new_node->typeclass = 5;
-			new_node->size = 0;
+			new_node->size = 1;
 			break;
 	}
 
@@ -711,7 +744,7 @@ struct decl* makevardecl(struct decl* typedecl) {
 
 	new_node->declclass = 0; // VAR
 	new_node->type = typedecl;
-	new_node->size = 1;
+	new_node->size = typedecl->size;
 	new_node->origin = new_node;
 
 	return new_node;
