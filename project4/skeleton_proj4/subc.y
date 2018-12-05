@@ -488,7 +488,7 @@ unary
 		| CHAR_CONST {
 			$$ = makecharconstdecl($1);
 
-			fprintf(output_file, "\tpush_const %d\n", $1[0]);
+			fprintf(output_file, "\tpush_const %d\n", $1[1]);
 		}
 		| STRING {
 			$$ = addpointer(makecharconstdecl($1)); 
@@ -549,6 +549,22 @@ unary
 		| unary DECOP {
 			$$ = $1;
 			check_incable($1);
+
+			int size = 1;
+			if ($1->type->typeclass == 3) 
+				size = $1->type->ptrto->size;
+
+			fprintf(output_file,"\tpush_reg sp\n");
+			fprintf(output_file,"\tfetch\n");
+			fprintf(output_file,"\tpush_reg sp\n");
+			fprintf(output_file,"\tfetch\n");
+			fprintf(output_file,"\tfetch\n");
+			fprintf(output_file,"\tpush_const %d\n",size);
+			fprintf(output_file,"\tsub\n");
+			fprintf(output_file,"\tassign\n");
+			fetch_val($1);
+			fprintf(output_file,"\tpush_const %d\n",size);
+			fprintf(output_file,"\tadd\n");
 		}
 		| INCOP unary {
 			$$ = $2;
@@ -570,6 +586,20 @@ unary
 		| DECOP unary {
 			$$ = $2;
 			check_incable($2);
+
+			int size = 1;
+			if ($2->type->typeclass == 3) 
+				size = $2->type->ptrto->size;
+
+			fprintf(output_file,"\tpush_reg sp\n");
+			fprintf(output_file,"\tfetch\n");
+			fprintf(output_file,"\tpush_reg sp\n");
+			fprintf(output_file,"\tfetch\n");
+			fprintf(output_file,"\tfetch\n");
+			fprintf(output_file,"\tpush_const %d\n",size);
+			fprintf(output_file,"\tsub\n");
+			fprintf(output_file,"\tassign\n");
+
 		}
 		| '&' unary	%prec '!' {
 			$$ = addpointer($2);
@@ -581,7 +611,7 @@ unary
 			// Do nothing for code generation
 		}
 		| '*' unary	%prec '!' {
-			$$ = reference_ptr($2);
+			$$ = clonedecl(reference_ptr($2));
 
 			// Pointer do not use fetch_val functions.
 			fprintf(output_file, "\tfetch\n");
@@ -589,10 +619,12 @@ unary
 		| unary '[' {
 			// fprintf(output_file, "\tfetch\n");
 		} expr ']' {
-			$$ = reference_array($1, $4);
+			$$ = clonedecl(reference_array($1, $4));
 
-			fprintf(output_file, "\tpush_const %d\n", $$->size);
-			fprintf(output_file, "\tmul\n");
+			if ($$->size > 1) {
+				fprintf(output_file, "\tpush_const %d\n", $$->size);
+				fprintf(output_file, "\tmul\n");
+			}
 			fprintf(output_file, "\tadd\n");
 		}
 		| unary '.' ID {
