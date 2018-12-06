@@ -258,11 +258,23 @@ stmt
 			fprintf(output_file, "\tjump %s_final\n", lookup_id(lookup_func())->name);
 		}
 		| RETURN {
-			fprintf(output_file,"\tpush_reg fp\n");
-			fprintf(output_file,"\tpush_const -1\n");
-			fprintf(output_file,"\tadd\n");	// ret addr 
-			fprintf(output_file,"\tpush_const -%d\n", lookup_func()->returntype->size);
-			fprintf(output_file,"\tadd\n");	// ret val
+			// For struct 
+			if (lookup_func()->returntype->typeclass == 4) {
+				for (int i = lookup_func()->returntype->size; i >= 1; i--) {
+					fprintf(output_file,"\tpush_reg fp\n");
+					fprintf(output_file,"\tpush_const -1\n");
+					fprintf(output_file,"\tadd\n");	// ret addr 
+					fprintf(output_file,"\tpush_const -%d\n", i);
+					fprintf(output_file,"\tadd\n");	// ret val
+				}
+			}
+			else {
+				fprintf(output_file,"\tpush_reg fp\n");
+				fprintf(output_file,"\tpush_const -1\n");
+				fprintf(output_file,"\tadd\n");	// ret addr 
+				fprintf(output_file,"\tpush_const -%d\n", lookup_func()->returntype->size);
+				fprintf(output_file,"\tadd\n");	// ret val
+			}
 		} expr ';' {
 			struct decl* func_decl = lookup_func();
 			
@@ -274,8 +286,23 @@ stmt
 				}
 			}
 
-			fprintf(output_file, "\tassign\n");
-			fprintf(output_file, "\tjump %s_final\n", lookup_id(lookup_func())->name);
+			// For struct return 
+			if (lookup_func()->returntype->typeclass == 4) {
+				// We will reload whole struct 
+				fprintf(output_file, "\tshift_sp -1\n");
+				//Assign struct, last to first order
+				for (int i = $3->offset + $3->type->size - 1; i >= $3->offset; i--) {
+					fprintf(output_file, "\tpush_reg fp\n");
+					fprintf(output_file, "\tpush_const %d\n", i);
+					fprintf(output_file, "\tadd\n");
+					fprintf(output_file, "\tfetch\n");
+					fprintf(output_file, "\tassign\n");
+				}
+			}	
+			else {
+				fprintf(output_file, "\tassign\n");
+				fprintf(output_file, "\tjump %s_final\n", lookup_id(lookup_func())->name);
+			}
 		}
 		| ';'
 		| if_stmt stmt %prec THEN {
@@ -397,20 +424,37 @@ expr
 			$$ = clonedecl($1);
 
 			if ($1 != NULL && $1->type != NULL && $1->type->typeclass == 4) {
-				fprintf(output_file, "\tshift_sp -1\n");	// We will reload address of struct. 
-				//Assign struct, last to first order
-				for (int i = $4->offset + $4->type->size - 1; i >= $4->offset; i--) {
-					fprintf(output_file, "\tpush_reg fp\n");
-					fprintf(output_file, "\tpush_const %d\n", i);
-					fprintf(output_file, "\tadd\n");
-					fprintf(output_file, "\tfetch\n");
-					fprintf(output_file, "\tassign\n");
+				// If we return from function, don't shift!
+				if (!$4->defined) {
+					fprintf(output_file, "\tshift_sp -1\n");	// We will reload address of struct. 
+					//Assign struct, last to first order
+					for (int i = $4->offset + $4->type->size - 1; i >= $4->offset; i--) {
+						fprintf(output_file, "\tpush_reg fp\n");
+						fprintf(output_file, "\tpush_const %d\n", i);
+						fprintf(output_file, "\tadd\n");
+						fprintf(output_file, "\tfetch\n");
+						fprintf(output_file, "\tassign\n");
+					}
+					for (int i = 0; i < $1->type->size; i++) {
+						fprintf(output_file, "\tfetch\n");
+						fprintf(output_file, "\tshift_sp -1\n");
+					}
+					fprintf(output_file, "\tshift_sp %d\n", $1->type->size);
+				} else {
+					for (int i = 0; i < $4->type->size; i++) {
+						fprintf(output_file, "\tpush_reg sp\n");
+						fprintf(output_file, "\tpush_const -%d\n", $4->type->size);
+						fprintf(output_file, "\tadd\n");
+						fprintf(output_file, "\tfetch\n");
+						fprintf(output_file, "\tpush_reg sp\n");
+						fprintf(output_file, "\tpush_const -1\n");
+						fprintf(output_file, "\tadd\n");
+						fprintf(output_file, "\tfetch\n");
+						fprintf(output_file, "\tassign\n");
+						fprintf(output_file, "\tshift_sp -1\n");
+					}
+					fprintf(output_file, "\tshift_sp -%d\n", $4->type->size);
 				}
-				for (int i = 0; i < $1->type->size; i++) {
-					fprintf(output_file, "\tfetch\n");
-					fprintf(output_file, "\tshift_sp -1\n");
-				}
-				fprintf(output_file, "\tshift_sp %d\n", $1->type->size);
 			}
 			else {
 				fprintf(output_file, "\tassign\n");
@@ -737,8 +781,11 @@ unary
 				print_error("actual args are not equal to formal args");
 			}
 
-			if ($1 != NULL) 
+			if ($1 != NULL) {
 				$$ = makeconstdecl($1->returntype);
+				$$->defined = 2;		// for code generation
+				$$->fetched = 1;
+			}
 			else 
 				$$ = NULL;
 
@@ -748,7 +795,7 @@ unary
 				if (arg_list->type->typeclass == 2)
 					actual_count++;
 				else 
-					actual_count += arg_list->size;
+					actual_count += arg_list->type->size;
 				arg_list = arg_list->next;
 			}
 
@@ -786,6 +833,15 @@ args    /* actual parameters(function arguments) transferred to function */
 		: expr {
 			$$ = clonedecl($1);
 			$$->next = NULL;
+
+			if ($1->type->typeclass == 4) {
+				for (int i = $1->offset + 1; i < $1->offset + $1->type->size; i++) {
+					fprintf(output_file, "\tpush_reg fp\n"); 
+					fprintf(output_file, "\tpush_const %d\n", i);
+					fprintf(output_file, "\tadd\n");
+					fprintf(output_file, "\tfetch\n");
+				}
+			}
 		}
 		| args ',' expr {
 			struct decl* cur_node = $1;
