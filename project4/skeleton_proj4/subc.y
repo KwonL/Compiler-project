@@ -371,9 +371,22 @@ const_expr
 
 expr
 		: unary {
-			fprintf(output_file, "\tpush_reg sp\n");
-			fprintf(output_file, "\tfetch\n");
-
+			// Struct needs some more code 
+			if ($1 != NULL && $1->type != NULL && $1->type->typeclass == 4) {
+				fprintf(output_file, "\tpush_reg sp\n");
+				fprintf(output_file, "\tfetch\n");	// Push all element's address in stack
+				for (int i = 0; i < $1->type->size - 1; i++) {
+					fprintf(output_file, "\tpush_reg sp\n");
+					fprintf(output_file, "\tfetch\n");	// Push all element's address in stack
+					fprintf(output_file, "\tpush_const 1\n");
+					fprintf(output_file, "\tadd\n");
+				}
+			} 
+			// normal variable
+			else {
+				fprintf(output_file, "\tpush_reg sp\n");
+				fprintf(output_file, "\tfetch\n");
+			}
 		} '=' expr {
 			if ($1 == NULL || $1->declclass != 0) print_error("LHS is not a variable");
 			if ($4 == NULL || ($4->declclass != 0 && $4->declclass != 1)) {
@@ -383,8 +396,26 @@ expr
 				check_compatibility($1, $4, 1);
 			$$ = clonedecl($1);
 
-			fprintf(output_file, "\tassign\n");
-			fetch_val($1);
+			if ($1 != NULL && $1->type != NULL && $1->type->typeclass == 4) {
+				fprintf(output_file, "\tshift_sp -1\n");	// We will reload address of struct. 
+				//Assign struct, last to first order
+				for (int i = $4->offset + $4->type->size - 1; i >= $4->offset; i--) {
+					fprintf(output_file, "\tpush_reg fp\n");
+					fprintf(output_file, "\tpush_const %d\n", i);
+					fprintf(output_file, "\tadd\n");
+					fprintf(output_file, "\tfetch\n");
+					fprintf(output_file, "\tassign\n");
+				}
+				for (int i = 0; i < $1->type->size; i++) {
+					fprintf(output_file, "\tfetch\n");
+					fprintf(output_file, "\tshift_sp -1\n");
+				}
+				fprintf(output_file, "\tshift_sp %d\n", $1->type->size);
+			}
+			else {
+				fprintf(output_file, "\tassign\n");
+				fetch_val($1);
+			}
 		}
 		| or_expr {
 			$$ = $1;
