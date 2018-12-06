@@ -129,14 +129,14 @@ int main(int argc, char* argv[])
    }
    else yyin = stdin;
    if (argc >= 3) {
-	   output_file = fopen(argv[2], "rw");
+	   output_file = fopen(argv[2], "rw+");
    }
    else { 
 	   output_file = stdout;
    }
 	output_origin = output_file;
 	null_dev = fopen("/dev/null", "rw");
-	
+
    if(!yyin) {
       printf("Can't open input stream!\n");
       exit(1);

@@ -289,10 +289,51 @@ stmt
 		} stmt {
 			fprintf(output_file, "label_%d :\n", $<intVal>4);
 		}
-		| WHILE '(' expr ')' stmt
-		| FOR '(' expr_e ';' expr_e ';' expr_e ')' stmt
-		| BREAK ';'
-		| CONTINUE ';'
+		| WHILE {
+			loop_label = label_counter;
+			end_label = ++label_counter;
+			label_counter++;
+
+			fprintf(output_file, "label_%d :\n", loop_label);
+		} '(' expr ')' {
+			fprintf(output_file, "\tbranch_false label_%d\n", end_label);
+		} stmt {
+			fprintf(output_file, "\tjump label_%d\n", loop_label);
+			fprintf(output_file, "label_%d :\n", end_label);
+		}
+		| FOR '(' expr_e ';' {
+			loop_label = label_counter;
+			for_label = ++label_counter;
+			stmt_label = ++label_counter;
+			end_label = ++label_counter;
+			label_counter++;
+
+			fprintf(output_file, "\tshift_sp -1\n");
+			fprintf(output_file, "label_%d :\n", loop_label);
+		} expr_e ';' {
+			fprintf(output_file, "\tbranch_false label_%d\n", end_label);
+			fprintf(output_file, "\tjump label_%d\n", stmt_label);
+			fprintf(output_file, "label_%d :\n", for_label);
+		} expr_e ')' {
+			fprintf(output_file, "\tjump label_%d\n", loop_label);
+			fprintf(output_file, "label_%d :\n", stmt_label);
+		} stmt {
+			fprintf(output_file, "\tjump label_%d\n", for_label);
+			fprintf(output_file, "label_%d :\n", end_label);
+		}
+		| BREAK ';' {
+			fprintf(output_file, "\tjump label_%d\n", end_label);
+		}
+		| CONTINUE ';' {
+			// this is while loop
+			if (for_label <= loop_label) {
+				fprintf(output_file, "\tjump label_%d\n", loop_label);				
+			}
+			// else, this is for loop 
+			else {
+				fprintf(output_file, "\tjump label_%d\n", for_label);
+			}
+		}
 		| WRITE_INT '(' expr ')' ';' {
 			fetch_val($3);
 			fprintf(output_file, "\twrite_int\n");

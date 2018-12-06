@@ -119,6 +119,10 @@ FILE* null_dev;
 /* counter */
 int string_counter;
 int label_counter;
+int loop_label; 
+int end_label;
+int for_label;
+int stmt_label;
 
 /* Code generation */
 void printf_code(const char* s);
