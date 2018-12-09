@@ -1,0 +1,6 @@
+2016-10769 이권형
+lkh116@snu.ac.kr 
+
+Makefile에서 scope.c에 대한 사항 추가
+build: make 
+실행: ./subc
