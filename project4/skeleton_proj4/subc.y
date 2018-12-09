@@ -20,6 +20,7 @@ int    yyerror (char* s);
 	struct id	*idPtr;
 	struct decl	*declPtr;
 	struct ste	*stePtr;
+	struct labelstruct labelVal;
 }
 
 /* Precedences and Associativities */
@@ -48,7 +49,7 @@ int    yyerror (char* s);
 %nonassoc               THEN
 %nonassoc              ELSE
 %token              IF
-%token              WHILE
+%token<labelVal>              WHILE
 %token              FOR
 %token              BREAK
 %token              CONTINUE
@@ -317,16 +318,16 @@ stmt
 			fprintf(output_file, "label_%d :\n", $<intVal>4);
 		}
 		| WHILE {
-			loop_label = label_counter;
-			end_label = ++label_counter;
+			$1.loop_label = label_counter;
+			$1.end_label = ++label_counter;
 			label_counter++;
 
-			fprintf(output_file, "label_%d :\n", loop_label);
+			fprintf(output_file, "label_%d :\n", $1.loop_label);
 		} '(' expr ')' {
-			fprintf(output_file, "\tbranch_false label_%d\n", end_label);
+			fprintf(output_file, "\tbranch_false label_%d\n", $1.end_label);
 		} stmt {
-			fprintf(output_file, "\tjump label_%d\n", loop_label);
-			fprintf(output_file, "label_%d :\n", end_label);
+			fprintf(output_file, "\tjump label_%d\n", $1.loop_label);
+			fprintf(output_file, "label_%d :\n", $1.end_label);
 		}
 		| FOR '(' expr_e ';' {
 			loop_label = label_counter;

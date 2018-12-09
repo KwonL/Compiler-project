@@ -58,6 +58,12 @@ struct stack_node {
 struct stack_node* top; 
 struct stack_node* bottom;
 
+/* for WHILE label */
+struct labelstruct {
+    int loop_label;
+    int end_label;  
+};
+
 void push_scope(int counter);
 void insert(struct id* arg_id, struct decl* arg_decl);
 struct ste* pop_scope();

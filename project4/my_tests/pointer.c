@@ -18,4 +18,11 @@ int main() {
     write_string("\n");
     write_int(*kk[3]);
     write_string("\n");
+
+    a = &c;
+    write_int(a);
+    write_string("\n");
+    a = a + c;
+    write_int(a);
+    write_string("\n");
 }

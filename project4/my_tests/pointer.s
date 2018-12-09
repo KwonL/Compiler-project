@@ -78,6 +78,40 @@ Str1. string "\n"
 Str2. string "\n"
 	push_const Str2
 	write_string
+	push_const Lglob+0
+	push_reg sp
+	fetch
+	push_reg fp
+	push_const 1
+	add
+	assign
+	fetch
+	shift_sp -1
+	push_const Lglob+0
+	fetch
+	write_int
+Str3. string "\n"
+	push_const Str3
+	write_string
+	push_const Lglob+0
+	push_reg sp
+	fetch
+	push_const Lglob+0
+	fetch
+	push_reg fp
+	push_const 1
+	add
+	fetch
+	add
+	assign
+	fetch
+	shift_sp -1
+	push_const Lglob+0
+	fetch
+	write_int
+Str4. string "\n"
+	push_const Str4
+	write_string
 main_final :
 	push_reg fp
 	pop_reg sp
