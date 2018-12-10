@@ -567,6 +567,7 @@ binary
 				}
 			}
 
+			$$ = clonedecl($1);
 			fprintf(output_file, "\tadd\n");
 		}
 		| binary '-' binary {
@@ -629,6 +630,10 @@ unary
 				fprintf(output_file, "\tpush_const %d\n", $$->offset);
 				// Address of variable. We need to fetch actual value in operation.
 				fprintf(output_file, "\tadd\n");
+
+				if ($$->type->typeclass == 2) {
+					$$->fetched = 2;
+				}
 			}
 		}
 		| '-' unary	%prec '!' {
@@ -724,17 +729,17 @@ unary
 			if ($2 != NULL && $2->declclass != 0) {
 				print_error("not variable");
 			}
-
-			// Do nothing for code generation
+			$$->fetched = 2;
 		}
 		| '*' unary	%prec '!' {
 			$$ = clonedecl(reference_ptr($2));
 
 			// Pointer do not use fetch_val functions.
-			fprintf(output_file, "\tfetch\n");
+			fetch_val($2);
 		}
 		| unary '[' {
-			// fprintf(output_file, "\tfetch\n");
+			if ($1->type->typeclass == 3) 
+				fprintf(output_file, "\tfetch\n");
 		} expr ']' {
 			$$ = clonedecl(reference_array($1, $4));
 
@@ -1306,6 +1311,10 @@ void declare_struct(struct id* arg_id, struct decl* arg_decl) {
 }
 
 void fetch_val(struct decl* arg_decl) {
+	if (arg_decl->fetched == 2) {
+		arg_decl->fetched = 0;
+		return ;
+	}
 	// printf("fetch val called. declclass is %d, type is %d\n", arg_decl->declclass, arg_decl->type->typeclass);
 	if (arg_decl->declclass == 1) {
 		// Const. Don't fetch
