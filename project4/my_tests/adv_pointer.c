@@ -16,4 +16,11 @@ int main() {
     write_string("\n");
     write_int(arr[2]);
     write_string("\n");
+
+    write_int(*(++a));
+    write_string("\n");
+    write_int(*(++a));
+    write_string("\n");
+    write_int(a[0]);
+    write_string("\n");
 }

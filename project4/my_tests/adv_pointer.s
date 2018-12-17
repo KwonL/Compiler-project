@@ -73,6 +73,51 @@ Str0. string "\n"
 Str1. string "\n"
 	push_const Str1
 	write_string
+	push_reg fp
+	push_const 1
+	add
+	push_reg sp
+	fetch
+	push_reg sp
+	fetch
+	fetch
+	push_const 1
+	add
+	assign
+	fetch
+	fetch
+	write_int
+Str2. string "\n"
+	push_const Str2
+	write_string
+	push_reg fp
+	push_const 1
+	add
+	push_reg sp
+	fetch
+	push_reg sp
+	fetch
+	fetch
+	push_const 1
+	add
+	assign
+	fetch
+	fetch
+	write_int
+Str3. string "\n"
+	push_const Str3
+	write_string
+	push_reg fp
+	push_const 1
+	add
+	fetch
+	push_const 0
+	add
+	fetch
+	write_int
+Str4. string "\n"
+	push_const Str4
+	write_string
 main_final :
 	push_reg fp
 	pop_reg sp
