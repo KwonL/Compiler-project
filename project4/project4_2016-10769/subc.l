@@ -129,7 +129,7 @@ int main(int argc, char* argv[])
    }
    else yyin = stdin;
    if (argc >= 3) {
-	   output_file = fopen(argv[2], "rw+");
+	   output_file = fopen(argv[2], "w");
    }
    else { 
 	   output_file = stdout;
